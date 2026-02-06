@@ -57,9 +57,21 @@ class CatListCreateView(generics.ListCreateAPIView):
                 Q(color__icontains=search) |
                 Q(personality__icontains=search)
             )
-        
-        # 性別フィルター
+
+        # フィルター: 性別
         gender = self.request.query_params.get('gender', None)
+        if gender:
+             queryset = queryset.filter(gender=gender)
+
+        # フィルター: 年齢 (範囲指定)
+        min_age = self.request.query_params.get('min_age', None)
+        max_age = self.request.query_params.get('max_age', None)
+        
+        if min_age is not None:
+             queryset = queryset.filter(age_years__gte=min_age)
+        if max_age is not None:
+             queryset = queryset.filter(age_years__lte=max_age)
+
         # ステータスフィルター
         cat_status = self.request.query_params.get('status', None)
         

@@ -1,72 +1,61 @@
+
+
 services:
   db:
     image: mysql:8.0
     container_name: cat_matching_db
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: cat_matching
       MYSQL_USER: catuser
       MYSQL_PASSWORD: catpassword
+      MYSQL_ROOT_PASSWORD: rootpassword
     ports:
-      - "3307:3306"
+      - "3388:3306"  # Host port 3388 -> Container port 3306 (avoid conflict)
     volumes:
-      - mysql_data:/var/lib/mysql
-    networks:
-      - cat_network
+      - db_data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
-      retries: 10
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    build: ./backend
     container_name: cat_matching_backend
     command: >
-      sh -c "python manage.py makemigrations &&
-             python manage.py migrate &&
-             python manage.py collectstatic --noinput &&
-             python manage.py runserver 0.0.0.0:8000"
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000 --noreload"
     volumes:
       - ./backend:/app
+      - media_data:/app/media
     ports:
       - "8000:8000"
-    environment:
-      - DEBUG=True
-      - DB_NAME=cat_matching
-      - DB_USER=catuser
-      - DB_PASSWORD=catpassword
-      - DB_HOST=db
-      - DB_PORT=3306
-      - SECRET_KEY=your-secret-key-change-in-production
     depends_on:
       db:
         condition: service_healthy
-    networks:
-      - cat_network
+    environment:
+      - DB_HOST=db
+      - DB_NAME=cat_matching
+      - DB_USER=catuser
+      - DB_PASSWORD=catpassword
+      - SECRET_KEY=django-insecure-dev-key
+      - DEBUG=True
+      - ALLOWED_HOSTS=*
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    build: ./frontend
     container_name: cat_matching_frontend
     volumes:
       - ./frontend:/app
       - /app/node_modules
-      - /app/.next
     ports:
-      - "4001:3000"
+      - "3000:3000"
     environment:
+      - WATCHPACK_POLLING=true
       - NEXT_PUBLIC_API_URL=http://localhost:8000
     depends_on:
       - backend
-    networks:
-      - cat_network
 
 volumes:
-  mysql_data:
-
-networks:
-  cat_network:
-    driver: bridge
+  db_data:
+  media_data:

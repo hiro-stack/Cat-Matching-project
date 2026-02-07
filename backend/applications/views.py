@@ -82,6 +82,30 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         from rest_framework.exceptions import NotFound
         raise NotFound("この応募を表示する権限がないか、存在しません。")
 
+    def create(self, request, *args, **kwargs):
+        """応募作成（既存チェック付き）"""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        user = self.request.user
+        cat = serializer.validated_data['cat']
+
+        # 既存の有効な応募があるかチェック（重複応募防止）
+        existing_application = Application.objects.filter(
+            applicant=user,
+            cat=cat,
+            status__in=['pending', 'reviewing', 'accepted']
+        ).first()
+
+        if existing_application:
+            # 既に存在する場合はそのIDを返して、フロントエンドでリダイレクトさせる
+            # 200 OK を返すことで「作成成功（ただし既存）」として扱う
+            return Response({'id': existing_application.id, 'detail': '既に応募済みです。メッセージ画面へ移動します。'}, status=status.HTTP_200_OK)
+
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
     def perform_create(self, serializer):
         # 応募者はログインユーザー固定
         # 冗長フィールド shelter もここで確実にセットし、データ整合性を担保する

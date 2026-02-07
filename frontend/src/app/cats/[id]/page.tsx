@@ -161,14 +161,19 @@ export default function CatDetailPage() {
 
     try {
       // 申請を作成
-      const response = await api.post("/api/applications/applications/", {
+      const response = await api.post("/api/applications/", {
         cat: id,
         ...formData,
         age: parseInt(formData.age),
         family_members: parseInt(formData.family_members),
       });
       
-      router.push(`/messages/${response.data.id}`);
+      if (response.data && response.data.id) {
+        router.push(`/messages/${response.data.id}`);
+      } else {
+        console.error("Application created but no ID returned:", response.data);
+        setApplicationError("申請は完了しましたが、画面遷移に失敗しました。マイページをご確認ください。");
+      }
       
     } catch (err: any) {
       console.error("Application failed:", err);
@@ -426,6 +431,33 @@ export default function CatDetailPage() {
       
       {/* ... (Main Content) ... */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* 受付停止中のアラート */}
+        {cat.status !== "open" && (
+          <div className="mb-8 bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r shadow-sm">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-amber-800">
+                  現在、この保護猫の里親募集は停止されています
+                </h3>
+                <div className="mt-2 text-sm text-amber-700">
+                  <p>
+                    現在のステータス: <span className="font-bold">{STATUS_LABELS[cat.status as keyof typeof STATUS_LABELS] || cat.status}</span>
+                  </p>
+                  <p className="mt-1">
+                    申し訳ありませんが、現在は応募を受け付けておりません。<br/>
+                    <Link href="/" className="text-amber-900 underline hover:text-amber-800">他の募集中の保護猫</Link>もぜひご覧ください。
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* メディアギャラリー */}
           <div className="space-y-4">
@@ -612,12 +644,19 @@ export default function CatDetailPage() {
             )}
 
             {/* 応募ボタン */}
-            {cat.status === "open" && (
+            {cat.status === "open" ? (
               <button 
                 onClick={handleApplyClick} 
                 className="w-full py-3 bg-[#f4a5b9] text-white text-lg font-medium rounded-lg hover:bg-[#ef8ca4] transition-colors shadow-md transform hover:scale-[1.02] duration-200"
               >
                 里親に応募する
+              </button>
+            ) : (
+              <button 
+                disabled
+                className="w-full py-3 bg-gray-300 text-gray-500 text-lg font-medium rounded-lg cursor-not-allowed"
+              >
+                {STATUS_LABELS[cat.status as keyof typeof STATUS_LABELS] || cat.status} (受付停止中)
               </button>
             )}
           </div>

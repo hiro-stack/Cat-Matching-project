@@ -5,14 +5,21 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Cookies from "js-cookie";
 import api from "@/lib/api";
-import { ArrowLeft, Send, User, Home } from "lucide-react";
+import { ArrowLeft, Send, User as UserIcon, Home } from "lucide-react";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
+
+import { User } from "@/types";
 
 interface Message {
   id: number;
   application: number;
-  sender_type: 'adopter' | 'shelter';
+  sender: number;
+  sender_type: 'user' | 'shelter' | 'admin';
+  sender_info: {
+    username: string;
+    [key: string]: any;
+  };
   content: string;
   is_read: boolean;
   created_at: string;
@@ -21,8 +28,11 @@ interface Message {
 interface Application {
   id: number;
   cat: number;
-  cat_name?: string; // APIレスポンスに猫の名前が含まれていると仮定
-  shelter_name?: string;
+  cat_detail: {
+    name: string;
+    shelter_name: string;
+    [key: string]: any;
+  }; 
   status: string;
 }
 
@@ -34,6 +44,7 @@ export default function MessagePage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [application, setApplication] = useState<Application | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   
@@ -57,9 +68,18 @@ export default function MessagePage() {
     }
   };
 
+  const fetchUser = async () => {
+    try {
+      const res = await api.get('/api/accounts/profile/');
+      setCurrentUser(res.data);
+    } catch (err) {
+      console.error("Failed to fetch user:", err);
+    }
+  };
+
   const fetchMessages = async () => {
     try {
-      const res = await api.get(`/api/applications/messages/?application=${applicationId}`);
+      const res = await api.get(`/api/messages/?application=${applicationId}`);
       // 古い順に並び替え
       const sortedMessages = res.data.sort((a: Message, b: Message) => 
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
@@ -78,8 +98,11 @@ export default function MessagePage() {
     }
 
     const init = async () => {
-      await fetchApplication();
-      await fetchMessages();
+      await Promise.all([
+        fetchApplication(),
+        fetchMessages(),
+        fetchUser()
+      ]);
       setIsLoading(false);
       scrollToBottom();
     };
@@ -106,10 +129,9 @@ export default function MessagePage() {
 
     setIsSending(true);
     try {
-      await api.post("/api/applications/messages/", {
-        application: applicationId,
+      await api.post("/api/messages/", {
+        application_id: Number(applicationId),
         content: newMessage,
-        sender_type: "adopter", // ユーザー側から送信
       });
       setNewMessage("");
       await fetchMessages(); // 即時更新
@@ -145,10 +167,10 @@ export default function MessagePage() {
              </div>
              <div>
                <h1 className="font-bold text-gray-800">
-                 {application?.shelter_name || "保護団体"}
+                 {application?.cat_detail?.shelter_name || "保護団体"}
                </h1>
                <p className="text-xs text-gray-500">
-                 {application?.cat_name ? `${application.cat_name}への問い合わせ` : "里親申請チャット"}
+                 {application?.cat_detail?.name ? `${application.cat_detail.name}への問い合わせ` : "里親申請チャット"}
                </p>
              </div>
           </div>
@@ -166,7 +188,7 @@ export default function MessagePage() {
              </div>
           ) : (
             messages.map((msg) => {
-              const isMe = msg.sender_type === 'adopter';
+              const isMe = currentUser ? msg.sender === currentUser.id : false;
               return (
                 <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${

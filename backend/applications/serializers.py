@@ -61,11 +61,12 @@ class ApplicationCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Application
         fields = [
-            'cat', 'full_name', 'age', 'occupation', 'phone_number',
+            'id', 'cat', 'full_name', 'age', 'occupation', 'phone_number',
             'address', 'housing_type', 'has_garden', 'family_members',
             'has_other_pets', 'other_pets_description', 'has_experience',
             'experience_description', 'motivation', 'additional_notes'
         ]
+        read_only_fields = ['id']
 
 
 class ApplicationStatusUpdateSerializer(serializers.ModelSerializer):

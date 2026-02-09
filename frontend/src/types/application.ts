@@ -1,6 +1,8 @@
+import { CatList, User } from './index';
+
 export interface Application {
   id: number;
-  cat: number | CatList; 
+  cat: number | CatList;
   applicant: number | User;
   shelter: number;
   status: ApplicationStatus; // 'pending' | 'approved' | 'rejected' | 'cancelled'

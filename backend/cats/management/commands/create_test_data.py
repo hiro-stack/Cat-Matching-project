@@ -4,7 +4,7 @@ Django management command to create test data for the cat matching application.
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from accounts.models import User
-from shelters.models import Shelter
+from shelters.models import Shelter, ShelterUser
 from cats.models import Cat
 import random
 
@@ -94,14 +94,25 @@ class Command(BaseCommand):
 
                 # Create shelter
                 shelter, created = Shelter.objects.get_or_create(
-                    user=user,
+                    name=shelter_data['name'],
                     defaults={
-                        'name': shelter_data['name'],
+                        'email': shelter_data['email'],
+                        'phone': '03-0000-0000',
+                        'prefecture': '東京都',
+                        'city': '渋谷区',
+                        'address': '〇〇1-2-3',
                         'description': shelter_data['description'],
                         'verification_status': shelter_data['verification_status'],
                     }
                 )
                 shelters.append(shelter)
+
+                # Link user to shelter as admin
+                ShelterUser.objects.get_or_create(
+                    shelter=shelter,
+                    user=user,
+                    defaults={'role': 'admin'}
+                )
 
                 self.stdout.write(self.style.SUCCESS(
                     f'✓ Shelter: {shelter.name} ({shelter_data["username"]} / {shelter_data["password"]})'
@@ -114,13 +125,19 @@ class Command(BaseCommand):
                         defaults={
                             'email': f'{staff_data["username"]}@example.org',
                             'user_type': 'shelter',
-                            'shelter_role': 'staff',
                         }
                     )
                     if created:
                         staff_user.set_password(staff_data['password'])
                         staff_user.save()
-                        self.stdout.write(f'  ✓ Staff: {staff_data["username"]} / {staff_data["password"]}')
+
+                    # Link staff to shelter
+                    ShelterUser.objects.get_or_create(
+                        shelter=shelter,
+                        user=staff_user,
+                        defaults={'role': 'staff'}
+                    )
+                    self.stdout.write(f'  ✓ Staff: {staff_data["username"]} / {staff_data["password"]}')
 
             # 3. Create Cats
             self.stdout.write('Creating cats...')

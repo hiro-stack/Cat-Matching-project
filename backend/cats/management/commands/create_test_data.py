@@ -16,10 +16,11 @@ class Command(BaseCommand):
     help = 'Create test data for development and demo purposes'
 
     def download_placeholder_image(self, width=800, height=600, cat_id=1):
-        """Download a placeholder cat image from placekitten.com"""
+        """Download a placeholder image from picsum.photos"""
         try:
-            url = f'https://placekitten.com/{width}/{height}?image={cat_id}'
-            response = urllib.request.urlopen(url, timeout=10)
+            # Use Lorem Picsum - more reliable than placekitten
+            url = f'https://picsum.photos/{width}/{height}?random={cat_id}'
+            response = urllib.request.urlopen(url, timeout=15)
             return ContentFile(response.read(), name=f'cat_{cat_id}.jpg')
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'  ⚠ Could not download image: {e}'))

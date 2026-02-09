@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Cookies from "js-cookie";
@@ -49,7 +49,7 @@ interface PendingFile {
   caption: string;
 }
 
-export default function EditCatPage({ params }: { params: { id: string } }) {
+function EditCatForm({ params }: { params: { id: string } }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isCreated = searchParams.get("created") === "true";
@@ -1059,5 +1059,20 @@ export default function EditCatPage({ params }: { params: { id: string } }) {
 
       <Footer />
     </div>
+  );
+}
+
+export default function EditCatPage({ params }: { params: { id: string } }) {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-[#f5f0f6] via-[#e8f4f8] to-[#f0f5ff] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">読み込み中...</p>
+        </div>
+      </div>
+    }>
+      <EditCatForm params={params} />
+    </Suspense>
   );
 }

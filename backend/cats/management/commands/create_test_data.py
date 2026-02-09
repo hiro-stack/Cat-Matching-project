@@ -3,14 +3,27 @@ Django management command to create test data for the cat matching application.
 """
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.core.files.base import ContentFile
 from accounts.models import User
 from shelters.models import Shelter, ShelterUser
-from cats.models import Cat
+from cats.models import Cat, CatImage, CatVideo
 import random
+import urllib.request
+import io
 
 
 class Command(BaseCommand):
     help = 'Create test data for development and demo purposes'
+
+    def download_placeholder_image(self, width=800, height=600, cat_id=1):
+        """Download a placeholder cat image from placekitten.com"""
+        try:
+            url = f'https://placekitten.com/{width}/{height}?image={cat_id}'
+            response = urllib.request.urlopen(url, timeout=10)
+            return ContentFile(response.read(), name=f'cat_{cat_id}.jpg')
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f'  ⚠ Could not download image: {e}'))
+            return None
 
     def handle(self, *args, **options):
         self.stdout.write(self.style.SUCCESS('Starting test data creation...'))
@@ -197,6 +210,47 @@ class Command(BaseCommand):
                 )
 
                 self.stdout.write(f'✓ Cat: {cat.name} ({shelter.name})')
+
+                # Add images for this cat (primary + 2-3 sub images)
+                num_images = random.randint(3, 4)
+                for img_idx in range(num_images):
+                    image_file = self.download_placeholder_image(
+                        width=random.choice([600, 800, 1000]),
+                        height=random.choice([600, 800, 1000]),
+                        cat_id=(i * 10 + img_idx)
+                    )
+
+                    if image_file:
+                        CatImage.objects.create(
+                            cat=cat,
+                            image=image_file,
+                            is_primary=(img_idx == 0),
+                            sort_order=img_idx,
+                            caption=f'{name}の写真{img_idx + 1}' if img_idx > 0 else f'{name}のメイン写真'
+                        )
+                        self.stdout.write(f'  📷 Image {img_idx + 1} added')
+
+                # Add 1-2 videos (using placeholder image as video thumbnail for demo)
+                num_videos = random.randint(0, 2)
+                for vid_idx in range(num_videos):
+                    # Note: We're using placeholder images as "video" files for demo purposes
+                    # In production, these would be actual video files
+                    video_file = self.download_placeholder_image(
+                        width=1280,
+                        height=720,
+                        cat_id=(i * 10 + vid_idx + 100)
+                    )
+
+                    if video_file:
+                        # Rename to .mp4 to simulate video file
+                        video_file.name = video_file.name.replace('.jpg', '.mp4')
+                        CatVideo.objects.create(
+                            cat=cat,
+                            video=video_file,
+                            sort_order=vid_idx,
+                            caption=f'{name}の動画{vid_idx + 1}'
+                        )
+                        self.stdout.write(f'  🎥 Video {vid_idx + 1} added')
 
             # 4. Create Regular Users (Adopters)
             self.stdout.write('Creating adopter users...')

@@ -83,7 +83,7 @@ const CatCard: FC<CatCardProps> = ({ cat }) => {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-gray-500">年齢:</span>
-            <span>{cat.age_years}歳</span>
+            <span>{cat.estimated_age}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-gray-500">性別:</span>

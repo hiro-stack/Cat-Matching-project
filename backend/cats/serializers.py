@@ -5,7 +5,7 @@ from shelters.models import ShelterUser
 class CatImageSerializer(serializers.ModelSerializer):
     """保護猫画像シリアライザー"""
     image_url = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = CatImage
         fields = ['id', 'image', 'image_url', 'is_primary', 'sort_order', 'caption', 'created_at']
@@ -18,6 +18,12 @@ class CatImageSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.image.url)
             return obj.image.url
         return None
+
+    def validate_is_primary(self, value):
+        """is_primaryフィールドの値を明示的にbooleanに変換"""
+        if isinstance(value, str):
+            return value.lower() in ('true', '1', 'yes')
+        return bool(value)
 
 class CatVideoSerializer(serializers.ModelSerializer):
     """保護猫動画シリアライザー"""
@@ -38,18 +44,19 @@ class CatVideoSerializer(serializers.ModelSerializer):
 
 class CatListSerializer(serializers.ModelSerializer):
     """保護猫一覧用シリアライザー"""
-    
+
     primary_image = serializers.SerializerMethodField()
     shelter_name = serializers.CharField(source='shelter.name', read_only=True)
-    
+    is_favorited = serializers.SerializerMethodField()
+
     class Meta:
         model = Cat
         fields = [
             'id', 'name', 'gender', 'age_category', 'estimated_age',
             'breed', 'size', 'color', 'status', 'primary_image',
-            'shelter_name', 'created_at'
+            'shelter_name', 'created_at', 'is_favorited'
         ]
-    
+
     def get_primary_image(self, obj):
         image_url = obj.primary_image_url
         if image_url:
@@ -58,6 +65,14 @@ class CatListSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(image_url)
             return image_url
         return None
+
+    def get_is_favorited(self, obj):
+        """ログイン中のユーザーがこの猫をお気に入り登録しているか"""
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            from favorites.models import Favorite
+            return Favorite.objects.filter(user=request.user, cat=obj).exists()
+        return False
 
 class ShelterInfoSerializer(serializers.Serializer):
     """保護団体情報シリアライザー（CatDetail用のネストされたシリアライザー）"""
@@ -77,37 +92,38 @@ class ShelterInfoSerializer(serializers.Serializer):
 
 class CatDetailSerializer(serializers.ModelSerializer):
     """保護猫詳細用シリアライザー"""
-    
+
     images = CatImageSerializer(many=True, read_only=True)
     videos = CatVideoSerializer(many=True, read_only=True)
     primary_image = serializers.SerializerMethodField()
-    
+    is_favorited = serializers.SerializerMethodField()
+
     # 修正: Shelter情報をネストされたシリアライザーで返す
     shelter = ShelterInfoSerializer(read_only=True)
     shelter_name = serializers.CharField(source='shelter.name', read_only=True)
-    
+
     class Meta:
         model = Cat
         fields = [
             'id', 'name', 'gender', 'age_category', 'estimated_age',
-            'breed', 'size', 'color', 
-            
+            'breed', 'size', 'color',
+
             # 詳細情報
-            'spay_neuter_status', 'vaccination_status', 'health_status_category', 
+            'spay_neuter_status', 'vaccination_status', 'health_status_category',
             'fiv_felv_status', 'health_notes',
-            
+
             # 性格
             'human_distance', 'activity_level', 'personality',
-            
+
             # 譲渡条件
             'interview_format', 'trial_period', 'transfer_fee', 'fee_details',
-            
+
             'description', 'status',
-            'images', 'videos', 'primary_image', 'shelter', 'shelter_name', 
-            'created_at', 'updated_at'
+            'images', 'videos', 'primary_image', 'shelter', 'shelter_name',
+            'created_at', 'updated_at', 'is_favorited'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
-    
+
     def get_primary_image(self, obj):
         image_url = obj.primary_image_url
         if image_url:
@@ -116,6 +132,14 @@ class CatDetailSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(image_url)
             return image_url
         return None
+
+    def get_is_favorited(self, obj):
+        """ログイン中のユーザーがこの猫をお気に入り登録しているか"""
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            from favorites.models import Favorite
+            return Favorite.objects.filter(user=request.user, cat=obj).exists()
+        return False
 
 class CatCreateUpdateSerializer(serializers.ModelSerializer):
     """保護猫作成・更新用シリアライザー"""

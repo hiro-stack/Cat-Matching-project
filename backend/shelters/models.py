@@ -153,7 +153,6 @@ class ShelterUser(models.Model):
     ROLE_CHOICES = [
         ('admin', '管理者'),
         ('staff', 'スタッフ'),
-        ('volunteer', 'ボランティア'),
     ]
     
     shelter = models.ForeignKey(

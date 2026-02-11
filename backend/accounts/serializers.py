@@ -178,3 +178,72 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             return user
         except IntegrityError:
             raise serializers.ValidationError("ユーザー登録中にエラーが発生しました。")
+
+
+# カスタムJWTシリアライザー（メールアドレスでログイン）
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.contrib.auth import authenticate
+
+
+class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """メールアドレスとパスワードでログインするカスタムシリアライザー"""
+
+    username_field = User.EMAIL_FIELD
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # usernameフィールドをemailに置き換える
+        self.fields[self.username_field] = serializers.EmailField(required=True, label='メールアドレス')
+        self.fields.pop('username', None)  # usernameフィールドを削除
+
+    def validate(self, attrs):
+        email = attrs.get(self.username_field) or attrs.get('email')
+        password = attrs.get('password')
+
+        if not email or not password:
+            raise serializers.ValidationError('メールアドレスとパスワードを入力してください。')
+
+        # メールアドレスでユーザーを検索
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            raise serializers.ValidationError('メールアドレスまたはパスワードが正しくありません。')
+
+        # パスワードを検証
+        if not user.check_password(password):
+            raise serializers.ValidationError('メールアドレスまたはパスワードが正しくありません。')
+
+        if not user.is_active:
+            raise serializers.ValidationError('このアカウントは無効化されています。')
+
+        # JWTトークンを生成
+        refresh = self.get_token(user)
+
+        return {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """パスワードリセット要求用シリアライザー"""
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        # ユーザーが存在するか確認（セキュリティのため存在しない場合もエラーにはしないのが一般的だが、
+        # 利便性のために今回は存在チェックを行うか、Viewで処理する）
+        # ここでは単純にバリデーションのみ行う
+        return value
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """パスワードリセット確定用シリアライザー"""
+    new_password = serializers.CharField(write_only=True, min_length=8)
+    re_new_password = serializers.CharField(write_only=True, min_length=8)
+    uid = serializers.CharField()
+    token = serializers.CharField()
+
+    def validate(self, data):
+        if data['new_password'] != data['re_new_password']:
+            raise serializers.ValidationError({"re_new_password": "パスワードが一致しません"})
+        return data

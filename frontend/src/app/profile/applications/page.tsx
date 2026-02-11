@@ -183,10 +183,14 @@ export default function ApplicationHistoryPage() {
                           <span className="text-gray-300">|</span>
                           <span className="text-sm text-gray-500">{app.cat_detail.shelter_name}</span>
                           {app.unread_count > 0 && (
-                            <span className="flex items-center gap-1 bg-pink-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-bounce shadow-sm">
+                            <Link
+                              href={`/messages/${app.id}`}
+                              className="flex items-center gap-1 bg-pink-500 hover:bg-pink-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-bounce shadow-sm cursor-pointer transition-colors"
+                              title="新着メッセージを確認"
+                            >
                               <MessageSquare className="w-3 h-3" />
                               新着 {app.unread_count}
-                            </span>
+                            </Link>
                           )}
                         </div>
                         {getStatusBadge(app.status)}
@@ -204,28 +208,26 @@ export default function ApplicationHistoryPage() {
                       </div>
 
                       {app.message && (
-                        <p className="text-sm text-gray-600 line-clamp-2 bg-gray-50 p-3 rounded-lg mb-4">
-                          <span className="text-gray-400 font-bold text-xs block mb-1">あなたのメッセージ:</span>
+                        <Link
+                          href={`/messages/${app.id}`}
+                          className="block text-sm text-gray-600 line-clamp-2 bg-gray-50 hover:bg-gray-100 p-3 rounded-lg mb-4 cursor-pointer transition-colors group/message"
+                        >
+                          <span className="text-gray-400 group-hover/message:text-pink-500 font-bold text-xs block mb-1 transition-colors">
+                            あなたのメッセージ: (クリックでチャットを開く)
+                          </span>
                           {app.message}
-                        </p>
+                        </Link>
                       )}
                     </div>
 
                     <div className="flex flex-wrap gap-3">
-                      <Link 
-                        href={`/messages/${app.id}`}
-                        className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 bg-pink-50 hover:bg-pink-100 text-pink-600 font-bold py-2.5 px-6 rounded-xl transition-colors text-sm"
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                        メッセージを送る
-                      </Link>
-                      <Link 
+                      <Link
                         href={`/cats/${app.cat_detail.id}`}
                         className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 text-gray-600 font-bold py-2.5 px-6 rounded-xl transition-colors text-sm"
                       >
                         猫の詳細を見る
                       </Link>
-                      
+
                       {/* 削除（アーカイブ）ボタン */}
                       {['accepted', 'rejected', 'cancelled'].includes(app.status) && (
                         <button

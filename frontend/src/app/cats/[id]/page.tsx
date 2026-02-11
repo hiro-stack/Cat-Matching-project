@@ -160,13 +160,29 @@ export default function CatDetailPage() {
       // ユーザー情報の役割をチェック
       const res = await api.get("/api/accounts/profile/");
       const user = res.data;
-      
+
       if (user.user_type === 'shelter' || user.shelter_role) {
         alert("保護団体アカウント（スタッフ・管理者）の方は、里親への応募はできません。一般ユーザーアカウントでログインしてください。");
         return;
       }
+
+      // 現在の応募数をチェック
+      const applicationsRes = await api.get("/api/applications/");
+      const applications = Array.isArray(applicationsRes.data)
+        ? applicationsRes.data
+        : (applicationsRes.data.results || []);
+
+      const activeStatuses = ['pending', 'reviewing', 'accepted'];
+      const activeApplicationsCount = applications.filter(
+        (app: any) => activeStatuses.includes(app.status)
+      ).length;
+
+      if (activeApplicationsCount >= 3) {
+        alert("現在進行中の応募が3件あります。一度に応募できる猫は3匹までです。\n\n先に進行中の応募を完了させるか、キャンセルしてから新しい応募を行ってください。");
+        return;
+      }
     } catch (err) {
-      console.error("Failed to check user role:", err);
+      console.error("Failed to check user role or applications:", err);
     }
 
     router.push(`/cats/${id}/apply`);
@@ -376,7 +392,19 @@ export default function CatDetailPage() {
                         {cat.shelter.business_hours && (
                             <div className="flex items-start gap-2">
                                 <Clock className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                                <span className="whitespace-pre-wrap">{cat.shelter.business_hours}</span>
+                                <div>
+                                    <span className="font-medium text-gray-700 block mb-0.5">営業時間</span>
+                                    <span className="whitespace-pre-wrap">{cat.shelter.business_hours}</span>
+                                </div>
+                            </div>
+                        )}
+                        {cat.shelter.transfer_available_hours && (
+                            <div className="flex items-start gap-2">
+                                <Calendar className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                <div>
+                                    <span className="font-medium text-gray-700 block mb-0.5">譲渡対応時間</span>
+                                    <span className="whitespace-pre-wrap">{cat.shelter.transfer_available_hours}</span>
+                                </div>
                             </div>
                         )}
                      </div>
@@ -473,6 +501,14 @@ export default function CatDetailPage() {
                     </p>
                 )}
             </div>
+
+            {/* ストーリー・紹介文 */}
+            {cat.description && (
+              <div className="bg-white rounded-lg p-6 shadow-md border border-pink-100">
+                <h2 className="text-xl font-bold text-gray-900 mb-3">紹介文</h2>
+                <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{cat.description}</p>
+              </div>
+            )}
             
              {/* 医療情報 */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
@@ -543,13 +579,7 @@ export default function CatDetailPage() {
                 </div>
              </div>
 
-            {/* ストーリー・紹介文 */}
-            {cat.description && (
-              <div className="bg-white rounded-lg p-6 shadow-md border border-pink-100">
-                <h2 className="text-xl font-bold text-gray-900 mb-3">紹介文</h2>
-                <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{cat.description}</p>
-              </div>
-            )}
+
 
             <div className="text-xs text-gray-400 text-right">
                 登録日: {new Date(cat.created_at).toLocaleDateString()}

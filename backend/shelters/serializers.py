@@ -98,3 +98,25 @@ class ShelterRegistrationSerializer(serializers.Serializer):
             )
             
             return user
+
+class ShelterMemberSerializer(serializers.ModelSerializer):
+    """シェルターメンバー管理用シリアライザー"""
+    user_id = serializers.ReadOnlyField(source='user.id')
+    username = serializers.ReadOnlyField(source='user.username')
+    email = serializers.ReadOnlyField(source='user.email')
+    
+    class Meta:
+        model = ShelterUser
+        fields = ['id', 'user_id', 'username', 'email', 'role', 'is_active', 'joined_at']
+        read_only_fields = ['id', 'user_id', 'username', 'email', 'joined_at']
+
+class ShelterMemberAddSerializer(serializers.Serializer):
+    """メンバー追加用シリアライザー（メールアドレス指定）"""
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        if not User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("指定されたメールアドレスのユーザーが見つかりません。")
+        return value

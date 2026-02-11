@@ -104,3 +104,90 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
     
     def get_object(self):
         return self.request.user
+
+
+# メールアドレスでログインするカスタムビュー
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import EmailTokenObtainPairSerializer
+
+
+class EmailTokenObtainPairView(TokenObtainPairView):
+    """メールアドレスとパスワードでログインするカスタムビュー"""
+    serializer_class = EmailTokenObtainPairSerializer
+
+
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import send_mail
+from .serializers import PasswordResetRequestSerializer, PasswordResetConfirmSerializer
+
+class PasswordResetRequestView(APIView):
+    """パスワードリセット要求API"""
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            # セキュリティのため、ユーザーが存在しない場合も成功レスポンスを返す
+            return Response({"detail": "パスワードリセットメールを送信しました。"}, status=status.HTTP_200_OK)
+
+        # トークン生成
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+        # メール送信
+        # TODO: フロントエンドURLを環境変数から取得するように変更推奨
+        reset_link = f"http://localhost:3000/reset-password/{uid}/{token}" 
+        subject = "【保護猫マッチング】パスワードリセット"
+        message = f"""
+パスワードリセットのリクエストを受け付けました。
+以下のリンクをクリックして、新しいパスワードを設定してください。
+
+{reset_link}
+
+※このリンクは有効期限があります。
+お心当たりがない場合は、このメールを破棄してください。
+        """
+        from_email = "system@example.com"
+        
+        try:
+            send_mail(subject, message, from_email, [email])
+        except Exception as e:
+            print(f"Failed to send email: {e}")
+            return Response({"detail": "メール送信に失敗しました。"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({"detail": "パスワードリセットメールを送信しました。"}, status=status.HTTP_200_OK)
+
+
+class PasswordResetConfirmView(APIView):
+    """パスワードリセット確定API"""
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        uid = serializer.validated_data['uid']
+        token = serializer.validated_data['token']
+        new_password = serializer.validated_data['new_password']
+
+        try:
+            uid = force_str(urlsafe_base64_decode(uid))
+            user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            return Response({"detail": "無効なリンクです。"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not default_token_generator.check_token(user, token):
+            return Response({"detail": "トークンが無効または期限切れです。"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # パスワード設定
+        user.set_password(new_password)
+        user.save()
+
+        return Response({"detail": "パスワードをリセットしました。"}, status=status.HTTP_200_OK)

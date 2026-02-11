@@ -519,125 +519,168 @@ function EditCatForm({ params }: { params: { id: string } }) {
                     <span className="text-xl">📝</span> 基本情報
                 </h2>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* 名前 */}
-                  <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1.5">
-                      名前 <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      id="name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none"
-                    />
-                  </div>
+                {isSuperUser ? (
+                  // 管理者用編集フォーム
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* 名前 */}
+                    <div>
+                      <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1.5">
+                        名前 <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none"
+                      />
+                    </div>
 
-                  {/* 性別 */}
-                  <div>
-                    <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-1.5">
-                      性別 <span className="text-red-400">*</span>
-                    </label>
-                    <select
-                      id="gender"
-                      name="gender"
-                      value={formData.gender}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none"
-                    >
-                      <option value="male">オス</option>
-                      <option value="female">メス</option>
-                      <option value="unknown">不明</option>
-                    </select>
-                  </div>
+                    {/* 性別 */}
+                    <div>
+                      <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-1.5">
+                        性別 <span className="text-red-400">*</span>
+                      </label>
+                      <select
+                        id="gender"
+                        name="gender"
+                        value={formData.gender}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none"
+                      >
+                        <option value="male">オス</option>
+                        <option value="female">メス</option>
+                        <option value="unknown">不明</option>
+                      </select>
+                    </div>
 
-                  {/* 年齢区分 */}
-                  <div>
-                    <label htmlFor="age_category" className="block text-sm font-medium text-gray-700 mb-1.5">
-                      年齢区分
-                    </label>
-                    <select
-                      id="age_category"
-                      name="age_category"
-                      value={formData.age_category}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none"
-                    >
-                      <option value="kitten">子猫</option>
-                      <option value="adult">成猫</option>
-                      <option value="senior">シニア猫</option>
-                      <option value="unknown">不明</option>
-                    </select>
-                  </div>
+                    {/* 年齢区分 */}
+                    <div>
+                      <label htmlFor="age_category" className="block text-sm font-medium text-gray-700 mb-1.5">
+                        年齢区分
+                      </label>
+                      <select
+                        id="age_category"
+                        name="age_category"
+                        value={formData.age_category}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none"
+                      >
+                        <option value="kitten">子猫</option>
+                        <option value="adult">成猫</option>
+                        <option value="senior">シニア猫</option>
+                        <option value="unknown">不明</option>
+                      </select>
+                    </div>
 
-                  {/* 推定年齢 */}
-                  <div>
-                    <label htmlFor="estimated_age" className="block text-sm font-medium text-gray-700 mb-1.5">
-                      推定年齢 (テキスト) <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      id="estimated_age"
-                      name="estimated_age"
-                      value={formData.estimated_age}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none"
-                      placeholder="例：2歳くらい、2023年春生まれ"
-                    />
-                  </div>
+                    {/* 推定年齢 */}
+                    <div>
+                      <label htmlFor="estimated_age" className="block text-sm font-medium text-gray-700 mb-1.5">
+                        推定年齢 (テキスト) <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        id="estimated_age"
+                        name="estimated_age"
+                        value={formData.estimated_age}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none"
+                        placeholder="例：2歳くらい、2023年春生まれ"
+                      />
+                    </div>
 
-                  {/* 品種 */}
-                  <div>
-                    <label htmlFor="breed" className="block text-sm font-medium text-gray-700 mb-1.5">
-                      品種
-                    </label>
-                    <input
-                      type="text"
-                      id="breed"
-                      name="breed"
-                      value={formData.breed}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none"
-                    />
-                  </div>
+                    {/* 品種 */}
+                    <div>
+                      <label htmlFor="breed" className="block text-sm font-medium text-gray-700 mb-1.5">
+                        品種
+                      </label>
+                      <input
+                        type="text"
+                        id="breed"
+                        name="breed"
+                        value={formData.breed}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none"
+                      />
+                    </div>
 
-                  {/* 体格 */}
-                  <div>
-                    <label htmlFor="size" className="block text-sm font-medium text-gray-700 mb-1.5">
-                      体格
-                    </label>
-                    <select
-                      id="size"
-                      name="size"
-                      value={formData.size}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none"
-                    >
-                      <option value="small">小型</option>
-                      <option value="medium">中型</option>
-                      <option value="large">大型</option>
-                    </select>
-                  </div>
+                    {/* 体格 */}
+                    <div>
+                      <label htmlFor="size" className="block text-sm font-medium text-gray-700 mb-1.5">
+                        体格
+                      </label>
+                      <select
+                        id="size"
+                        name="size"
+                        value={formData.size}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none"
+                      >
+                        <option value="small">小型</option>
+                        <option value="medium">中型</option>
+                        <option value="large">大型</option>
+                      </select>
+                    </div>
 
-                  {/* 毛色 */}
-                  <div className="md:col-span-2">
-                    <label htmlFor="color" className="block text-sm font-medium text-gray-700 mb-1.5">
-                      毛色
-                    </label>
-                    <input
-                      type="text"
-                      id="color"
-                      name="color"
-                      value={formData.color}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none"
-                    />
+                    {/* 毛色 */}
+                    <div className="md:col-span-2">
+                      <label htmlFor="color" className="block text-sm font-medium text-gray-700 mb-1.5">
+                        毛色
+                      </label>
+                      <input
+                        type="text"
+                        id="color"
+                        name="color"
+                        value={formData.color}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none"
+                      />
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  // 一般スタッフ用表示（閲覧のみ）
+                  <div className="space-y-4 text-gray-700">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <span className="text-sm font-medium text-gray-500 block">名前</span>
+                        {formData.name}
+                      </div>
+
+                      <div>
+                        <span className="text-sm font-medium text-gray-500 block">性別</span>
+                        {formData.gender === 'male' ? 'オス' : formData.gender === 'female' ? 'メス' : '不明'}
+                      </div>
+
+                      <div>
+                        <span className="text-sm font-medium text-gray-500 block">年齢区分</span>
+                        {formData.age_category === 'kitten' ? '子猫' : formData.age_category === 'adult' ? '成猫' : formData.age_category === 'senior' ? 'シニア猫' : '不明'}
+                      </div>
+
+                      <div>
+                        <span className="text-sm font-medium text-gray-500 block">推定年齢</span>
+                        {formData.estimated_age}
+                      </div>
+
+                      <div>
+                        <span className="text-sm font-medium text-gray-500 block">品種</span>
+                        {formData.breed || '未設定'}
+                      </div>
+
+                      <div>
+                        <span className="text-sm font-medium text-gray-500 block">体格</span>
+                         {formData.size === 'small' ? '小型' : formData.size === 'medium' ? '中型' : formData.size === 'large' ? '大型' : '未設定'}
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <span className="text-sm font-medium text-gray-500 block">毛色</span>
+                        {formData.color || '未設定'}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
                {/* B. 性格・特徴 */}
@@ -646,64 +689,96 @@ function EditCatForm({ params }: { params: { id: string } }) {
                     <span className="text-xl">✨</span> 性格・特徴
                 </h2>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                     {/* 人への距離感 */}
-                    <div>
-                        <label htmlFor="human_distance" className="block text-sm font-medium text-gray-700 mb-1.5">
-                        人への距離感
-                        </label>
-                        <select
-                        id="human_distance"
-                        name="human_distance"
-                        value={formData.human_distance}
-                         onChange={handleChange}
-                         className={`w-full px-4 py-3 rounded-xl border ${errors.human_distance ? 'border-red-500' : 'border-gray-200'} focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none`}
-                         >
-                            <option value="cuddly">抱っこ好き</option>
-                            <option value="ok">抱っこ可</option>
-                            <option value="shy">抱っこ苦手</option>
-                            <option value="unknown">不明</option>
-                        </select>
-                        {errors.human_distance && <p className="text-red-500 text-xs mt-1">{errors.human_distance}</p>}
+                {isSuperUser ? (
+                  // 管理者用編集フォーム
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        {/* 人への距離感 */}
+                        <div>
+                            <label htmlFor="human_distance" className="block text-sm font-medium text-gray-700 mb-1.5">
+                            人への距離感
+                            </label>
+                            <select
+                            id="human_distance"
+                            name="human_distance"
+                            value={formData.human_distance}
+                            onChange={handleChange}
+                            className={`w-full px-4 py-3 rounded-xl border ${errors.human_distance ? 'border-red-500' : 'border-gray-200'} focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none`}
+                            >
+                                <option value="cuddly">抱っこ好き</option>
+                                <option value="ok">抱っこ可</option>
+                                <option value="shy">抱っこ苦手</option>
+                                <option value="unknown">不明</option>
+                            </select>
+                            {errors.human_distance && <p className="text-red-500 text-xs mt-1">{errors.human_distance}</p>}
+                        </div>
+
+                        {/* 活発さ */}
+                        <div>
+                            <label htmlFor="activity_level" className="block text-sm font-medium text-gray-700 mb-1.5">
+                            活発さ
+                            </label>
+                            <select
+                            id="activity_level"
+                            name="activity_level"
+                            value={formData.activity_level}
+                            onChange={handleChange}
+                            className={`w-full px-4 py-3 rounded-xl border ${errors.activity_level ? 'border-red-500' : 'border-gray-200'} focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none`}
+                            >
+                                <option value="active">活発</option>
+                                <option value="normal">普通</option>
+                                <option value="calm">おっとり</option>
+                                <option value="unknown">不明</option>
+                            </select>
+                            {errors.activity_level && <p className="text-red-500 text-xs mt-1">{errors.activity_level}</p>}
+                        </div>
                     </div>
 
-                     {/* 活発さ */}
+                    {/* 性格詳細 */}
                     <div>
-                        <label htmlFor="activity_level" className="block text-sm font-medium text-gray-700 mb-1.5">
-                        活発さ
+                        <label htmlFor="personality" className="block text-sm font-medium text-gray-700 mb-1.5">
+                            性格詳細
                         </label>
-                        <select
-                        id="activity_level"
-                        name="activity_level"
-                        value={formData.activity_level}
-                        onChange={handleChange}
-                        className={`w-full px-4 py-3 rounded-xl border ${errors.activity_level ? 'border-red-500' : 'border-gray-200'} focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none`}
-                        >
-                             <option value="active">活発</option>
-                             <option value="normal">普通</option>
-                             <option value="calm">おっとり</option>
-                             <option value="unknown">不明</option>
-                        </select>
-                        {errors.activity_level && <p className="text-red-500 text-xs mt-1">{errors.activity_level}</p>}
+                        <textarea
+                            id="personality"
+                            name="personality"
+                            value={formData.personality}
+                            onChange={handleChange}
+                            rows={4}
+                            className={`w-full px-4 py-3 rounded-xl border ${errors.personality ? 'border-red-500' : 'border-gray-200'} focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none resize-none`}
+                            placeholder="猫の性格や好きなこと、苦手なことなどを詳しく入力してください。"
+                        />
+                        {errors.personality && <p className="text-red-500 text-xs mt-1">{errors.personality}</p>}
                     </div>
-                </div>
+                  </>
+                ) : (
+                  // 一般スタッフ用表示（閲覧のみ）
+                  <div className="space-y-4 text-gray-700">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <span className="text-sm font-medium text-gray-500 block">人への距離感</span>
+                        {formData.human_distance === 'cuddly' ? '抱っこ好き' : 
+                         formData.human_distance === 'ok' ? '抱っこ可' :
+                         formData.human_distance === 'shy' ? '抱っこ苦手' : '不明'}
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-gray-500 block">活発さ</span>
+                        {formData.activity_level === 'active' ? '活発' : 
+                         formData.activity_level === 'normal' ? '普通' :
+                         formData.activity_level === 'calm' ? 'おっとり' : '不明'}
+                      </div>
+                    </div>
 
-                {/* 性格詳細 */}
-                <div>
-                    <label htmlFor="personality" className="block text-sm font-medium text-gray-700 mb-1.5">
-                        性格詳細
-                    </label>
-                    <textarea
-                        id="personality"
-                        name="personality"
-                        value={formData.personality}
-                        onChange={handleChange}
-                        rows={4}
-                        className={`w-full px-4 py-3 rounded-xl border ${errors.personality ? 'border-red-500' : 'border-gray-200'} focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none resize-none`}
-                        placeholder="猫の性格や好きなこと、苦手なことなどを詳しく入力してください。"
-                    />
-                    {errors.personality && <p className="text-red-500 text-xs mt-1">{errors.personality}</p>}
-                </div>
+                    {formData.personality && (
+                      <div className="mt-4 pt-4 border-t border-gray-100">
+                        <span className="text-sm font-medium text-gray-500 block mb-1">性格詳細</span>
+                        <p className="whitespace-pre-wrap px-4 py-3 bg-white rounded-xl border border-gray-200 text-gray-600">
+                          {formData.personality}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
                {/* C. 医療情報 */}

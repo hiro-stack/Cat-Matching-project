@@ -8,7 +8,6 @@ import {
   ShieldCheck, 
   MapPin, 
   Phone, 
-  Mail, 
   User, 
   ClipboardCheck, 
   Heart,
@@ -34,6 +33,25 @@ const GENDER_LABELS: Record<string, string> = {
 const HOUSING_TYPE_LABELS: Record<string, string> = {
   owned: "持ち家",
   rented: "賃貸",
+};
+
+const PET_ALLOWED_LABELS: Record<string, string> = {
+  allowed: "可（契約書あり）",
+  planned: "確認予定",
+  not_allowed: "不可",
+};
+
+const ABSENCE_TIME_LABELS: Record<string, string> = {
+  less_than_4: "4時間未満",
+  "4_to_8": "4〜8時間",
+  "8_to_12": "8〜12時間",
+  more_than_12: "12時間以上",
+};
+
+const HOME_FREQUENCY_LABELS: Record<string, string> = {
+  high: "高い（ほぼ毎日）",
+  medium: "普通（週2-3日在宅）",
+  low: "低い（ほぼ不在）",
 };
 
 export default function ApplicationApplyPage() {
@@ -79,10 +97,10 @@ export default function ApplicationApplyPage() {
         setUser(userRes.data);
 
         // 基本情報の不足チェック
-        if (!userRes.data.phone_number || !userRes.data.address) {
-          // 警告を出すか、編集ページへ促す
-          setApplicationError("連絡先情報（電話番号・住所）が未登録です。プロフィール設定から登録してください。");
-        }
+        // if (!userRes.data.phone_number || !userRes.data.address) {
+        //   // 警告を出すか、編集ページへ促す
+        //   setApplicationError("連絡先情報（電話番号・住所）が未登録です。プロフィール設定から登録してください。");
+        // }
       } catch (err) {
         console.error("Failed to fetch data:", err);
       } finally {
@@ -118,7 +136,7 @@ export default function ApplicationApplyPage() {
       });
       
       if (response.data && response.data.id) {
-        router.push(`/messages/${response.data.id}`);
+        router.push(`/applications/complete?id=${response.data.id}`);
       }
     } catch (err: any) {
       console.error("Application failed:", err);
@@ -186,27 +204,24 @@ export default function ApplicationApplyPage() {
                       <span className="font-bold">{user.username}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Mail className="w-4 h-4 text-gray-400" />
-                    <div>
-                      <span className="text-xs text-gray-500 block">メールアドレス</span>
-                      <span className="font-bold">{user.email}</span>
+                  {user.phone_number && (
+                    <div className="flex items-center gap-3">
+                      <Phone className="w-4 h-4 text-gray-400" />
+                      <div>
+                        <span className="text-xs text-gray-500 block">電話番号</span>
+                        <span className="font-bold">{user.phone_number}</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Phone className="w-4 h-4 text-gray-400" />
-                    <div>
-                      <span className="text-xs text-gray-500 block">電話番号</span>
-                      <span className="font-bold">{user.phone_number || "未登録"}</span>
+                  )}
+                  {user.address && (
+                    <div className="flex items-center gap-3">
+                      <MapPin className="w-4 h-4 text-gray-400" />
+                      <div>
+                        <span className="text-xs text-gray-500 block">現在の住所</span>
+                        <span className="font-bold">{user.address}</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <MapPin className="w-4 h-4 text-gray-400" />
-                    <div>
-                      <span className="text-xs text-gray-500 block">現在の住所</span>
-                      <span className="font-bold">{user.address || "未登録"}</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
@@ -221,6 +236,18 @@ export default function ApplicationApplyPage() {
                   </div>
                   <div>
                     <span className="text-gray-500">住宅形態:</span> <span className="font-medium">{profile?.housing_type ? HOUSING_TYPE_LABELS[profile.housing_type] : "未入力"}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">ペット可否:</span> <span className="font-medium">{profile?.pet_allowed ? PET_ALLOWED_LABELS[profile.pet_allowed] : "未入力"}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">完全室内飼い:</span> <span className="font-medium">{profile?.indoors_agreement ? "同意済み" : "未回答"}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">平均留守時間:</span> <span className="font-medium">{profile?.absence_time ? ABSENCE_TIME_LABELS[profile.absence_time] : "未入力"}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">在宅頻度:</span> <span className="font-medium">{profile?.home_frequency ? HOME_FREQUENCY_LABELS[profile.home_frequency] : "未入力"}</span>
                   </div>
                 </div>
                 

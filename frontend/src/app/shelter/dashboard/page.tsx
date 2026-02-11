@@ -216,7 +216,7 @@ export default function ShelterDashboardPage() {
           )}
 
           {/* クイックアクション */}
-          <div className={`grid grid-cols-1 md:grid-cols-2 ${isAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-2'} gap-6 mb-8`}>
+          <div className={`grid grid-cols-1 md:grid-cols-2 ${isAdmin ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-6 mb-8`}>
             {isAdmin && (
               <Link
                 href="/shelter/cats/new"
@@ -263,6 +263,17 @@ export default function ShelterDashboardPage() {
                 {isAdmin ? "団体の情報を編集・管理" : "団体の情報を確認"}
               </p>
             </Link>
+
+            {isAdmin && (
+              <Link
+                href="/shelter/staff"
+                className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all group"
+              >
+                <div className="text-3xl mb-3 group-hover:scale-110 transition-transform">👥</div>
+                <h3 className="font-semibold text-gray-800 mb-1">スタッフ管理</h3>
+                <p className="text-sm text-gray-500">メンバーの権限設定・削除</p>
+              </Link>
+            )}
           </div>
 
           {/* 統計カード */}

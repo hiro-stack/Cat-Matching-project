@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Cookies from "js-cookie";
@@ -459,10 +459,20 @@ export default function SignupPage() {
 
             <div className="mt-12 pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-6">
               <div className="flex items-center gap-4">
-                <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Already Registered?</span>
-                <Link href="/login" className="text-sm font-bold text-pink-500 hover:text-pink-600 underline underline-offset-4 decoration-2">ログインはこちら</Link>
+                <Link href="/login" className="px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all bg-pink-50 text-pink-600 shadow-sm hover:bg-pink-100">
+                  ログインはこちら
+                </Link>
               </div>
-              <button onClick={() => { setIsShelterFlow(!isShelterFlow); setCurrentStep(1); setErrors({}); }} className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${isShelterFlow ? "bg-gray-50 text-gray-400" : "bg-pink-50 text-pink-600 shadow-sm"}`}>
+              <button 
+                onClick={() => { 
+                  setIsShelterFlow(!isShelterFlow); 
+                  setCurrentStep(1); 
+                  setErrors({}); 
+                }} 
+                className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                  isShelterFlow ? "bg-gray-50 text-gray-400" : "bg-pink-50 text-pink-600 shadow-sm"
+                }`}
+              >
                 {isShelterFlow ? "一般登録へ戻る" : "保護団体・カフェの方はこちら"}
               </button>
             </div>

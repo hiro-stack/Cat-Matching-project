@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'shelters',
     'cats',
     'applications',
+    'favorites',
     'storages',  # django-storages for S3-compatible storage
 ]
 

@@ -2,11 +2,15 @@ import { CatList } from "@/types";
 // import Image from "next/image"; // Removed in favor of ImageWithFallback
 import Link from "next/link";
 import { ImageWithFallback } from "@/components/common/ImageWithFallback";
-import { FC, useState } from "react";
+import { FC, useState, useEffect } from "react";
 import { Heart } from "lucide-react";
+import api from "@/lib/api";
+import Cookies from "js-cookie";
 
 interface CatCardProps {
   cat: CatList;
+  onFavoriteChange?: () => void;
+  showFavoriteButton?: boolean;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -31,15 +35,41 @@ const GENDER_LABELS: Record<string, string> = {
   unknown: "不明",
 };
 
-const CatCard: FC<CatCardProps> = ({ cat }) => {
-  const [isFavorite, setIsFavorite] = useState(false);
+const CatCard: FC<CatCardProps> = ({ cat, onFavoriteChange, showFavoriteButton = true }) => {
+  const [isFavorite, setIsFavorite] = useState(cat.is_favorited || false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleFavoriteClick = (e: React.MouseEvent) => {
+  useEffect(() => {
+    setIsFavorite(cat.is_favorited || false);
+  }, [cat.is_favorited]);
+
+  const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsFavorite(!isFavorite);
-    // TODO: Call API
-    console.log("Favorite clicked:", cat.id);
+
+    const token = Cookies.get("access_token");
+    if (!token) {
+      alert("お気に入り登録するにはログインが必要です。");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await api.post("/api/favorites/toggle/", {
+        cat: cat.id,
+      });
+
+      setIsFavorite(response.data.is_favorited);
+
+      if (onFavoriteChange) {
+        onFavoriteChange();
+      }
+    } catch (error) {
+      console.error("Failed to toggle favorite:", error);
+      alert("お気に入りの登録に失敗しました。");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -71,6 +101,23 @@ const CatCard: FC<CatCardProps> = ({ cat }) => {
           </span>
         </div>
 
+        {/* お気に入りボタン */}
+        {showFavoriteButton && (
+          <button
+            onClick={handleFavoriteClick}
+            disabled={isLoading}
+            className={`absolute top-2 right-2 p-2 rounded-full transition-all duration-200 ${
+              isFavorite
+                ? "bg-pink-500 text-white hover:bg-pink-600"
+                : "bg-white/90 text-gray-400 hover:bg-white hover:text-pink-500"
+            } ${isLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"} shadow-md`}
+            title={isFavorite ? "お気に入りから削除" : "お気に入りに追加"}
+          >
+            <Heart
+              className={`w-5 h-5 ${isFavorite ? "fill-current" : ""}`}
+            />
+          </button>
+        )}
       </div>
       {/* 情報エリア */}
       <div className="p-4">

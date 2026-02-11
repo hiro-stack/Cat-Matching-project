@@ -105,7 +105,21 @@ class ApplicationCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"lifelong_care_agreement": "終生飼養への同意が必要です。"})
         if not attrs.get('spay_neuter_agreement'):
             raise serializers.ValidationError({"spay_neuter_agreement": "不妊去勢への同意が必要です。"})
-        
+
+        # 応募制限チェック：一度に応募できる猫は3匹まで
+        user = self.context['request'].user
+        active_statuses = ['pending', 'reviewing', 'accepted']
+        active_applications_count = Application.objects.filter(
+            applicant=user,
+            status__in=active_statuses
+        ).count()
+
+        if active_applications_count >= 3:
+            raise serializers.ValidationError({
+                "cat": f"現在進行中の応募が{active_applications_count}件あります。一度に応募できる猫は3匹までです。"
+                       "既存の応募が完了（譲渡済み・不成立・キャンセル）してから新しい応募をしてください。"
+            })
+
         return attrs
 
 

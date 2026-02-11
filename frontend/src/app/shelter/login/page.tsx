@@ -11,7 +11,7 @@ import Footer from "@/components/common/Footer";
 export default function ShelterLoginPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    username: "",
+    email: "",
     password: "",
   });
   const [error, setError] = useState("");
@@ -55,8 +55,12 @@ export default function ShelterLoginPage() {
       console.error("Login error:", err);
       if (err.response?.data?.detail) {
         setError(err.response.data.detail);
+      } else if (err.response?.data) {
+        const errorData = err.response.data;
+        const errorMessages = Object.values(errorData).flat().join(" ");
+        setError(errorMessages || "ログインに失敗しました。メールアドレスとパスワードを確認してください。");
       } else {
-        setError("ログインに失敗しました。ユーザー名とパスワードを確認してください。");
+        setError("ログインに失敗しました。メールアドレスとパスワードを確認してください。");
       }
     } finally {
       setIsLoading(false);
@@ -82,13 +86,6 @@ export default function ShelterLoginPage() {
               </p>
             </div>
 
-            {/* 注意書き */}
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-xl text-blue-700 text-sm">
-              <p className="font-medium mb-1">💡 保護団体の方へ</p>
-              <p className="text-blue-600">
-                団体登録がお済みでない方は、事務局までお問い合わせください。
-              </p>
-            </div>
 
             {/* エラーメッセージ */}
             {error && (
@@ -101,20 +98,20 @@ export default function ShelterLoginPage() {
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label
-                  htmlFor="username"
+                  htmlFor="email"
                   className="block text-sm font-medium text-gray-700 mb-1.5"
                 >
-                  ユーザー名
+                  メールアドレス
                 </label>
                 <input
-                  type="text"
-                  id="username"
-                  name="username"
-                  value={formData.username}
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
                   onChange={handleChange}
                   required
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                  placeholder="団体ユーザー名を入力"
+                  placeholder="メールアドレスを入力"
                 />
               </div>
 
@@ -180,22 +177,6 @@ export default function ShelterLoginPage() {
                 <span>🐱</span>
                 一般ログイン
               </Link>
-            </div>
-          </div>
-
-          {/* 機能説明 */}
-          <div className="mt-8 grid grid-cols-3 gap-4">
-            <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 text-center border border-white/80">
-              <div className="text-2xl mb-2">📋</div>
-              <p className="text-xs text-gray-600">猫の登録・管理</p>
-            </div>
-            <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 text-center border border-white/80">
-              <div className="text-2xl mb-2">📨</div>
-              <p className="text-xs text-gray-600">申請の確認</p>
-            </div>
-            <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 text-center border border-white/80">
-              <div className="text-2xl mb-2">💬</div>
-              <p className="text-xs text-gray-600">メッセージ</p>
             </div>
           </div>
         </div>

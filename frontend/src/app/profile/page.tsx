@@ -206,23 +206,11 @@ export default function ProfilePage() {
                         <div className="bg-gray-50 rounded-2xl p-6 space-y-2">
                             {renderProfileItem("ユーザー名", user.username, "🆔")}
                             {renderProfileItem("メールアドレス", user.email, "📧")}
-                            {renderProfileItem("電話番号", user.phone_number, "📞")}
-                            {renderProfileItem("住所", user.address, "🏠")}
+                            {user.phone_number && renderProfileItem("電話番号", user.phone_number, "📞")}
+                            {user.address && renderProfileItem("住所", user.address, "🏠")}
                         </div>
                     </section>
 
-                    <section>
-                         <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <span className="text-2xl">💭</span> 自己紹介
-                        </h2>
-                        <div className="bg-white border-2 border-dashed border-gray-200 rounded-2xl p-6 text-gray-700 min-h-[100px]">
-                            {user.bio || (
-                            <span className="text-gray-400 italic">
-                                自己紹介が設定されていません
-                            </span>
-                            )}
-                        </div>
-                    </section>
                 </div>
 
                 {/* 右カラム：里親プロフィール */}
@@ -284,7 +272,7 @@ export default function ProfilePage() {
           </div>
 
           {/* クイックリンク */}
-           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Link
               href="/profile/applications"
               className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:border-pink-200 hover:shadow-md transition-all flex flex-col items-center text-center gap-3 group"
@@ -295,6 +283,19 @@ export default function ProfilePage() {
               <div>
                 <h3 className="font-bold text-gray-800">申請履歴</h3>
                 <p className="text-xs text-gray-500 mt-1">里親申請の状況を確認</p>
+              </div>
+            </Link>
+
+            <Link
+              href="/profile/favorites"
+              className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:border-pink-200 hover:shadow-md transition-all flex flex-col items-center text-center gap-3 group"
+            >
+              <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                ❤️
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-800">お気に入り</h3>
+                <p className="text-xs text-gray-500 mt-1">お気に入りの猫ちゃん</p>
               </div>
             </Link>
 

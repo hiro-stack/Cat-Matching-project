@@ -54,7 +54,6 @@ interface Application {
     email: string;
     phone_number: string;
     address: string;
-    bio: string;
     profile_image: string | null;
     applicant_profile: {
       age: number | null;
@@ -455,14 +454,6 @@ export default function ShelterApplicationDetailPage() {
                   <AgreementItem label="アレルギー対策済み" checked={application.allergy_status} />
                   <AgreementItem label="収入状況" value={application.income_status === 'stable' ? '安定' : '不安定'} />
                 </div>
-              </section>
-
-              {/* Bio */}
-              <section>
-                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">自己紹介（プロフィールより）</h3>
-                <p className="text-sm text-gray-600 leading-relaxed italic">
-                  {application.applicant_info.bio || "自己紹介文は設定されていません。"}
-                </p>
               </section>
               
               <div className="h-10" />

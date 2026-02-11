@@ -82,6 +82,8 @@ class Command(BaseCommand):
                     'email': 'info@nekoheart.org',
                     'verification_status': 'approved',
                     'description': '東京都を中心に保護猫の譲渡活動を行っています。',
+                    'business_hours': '平日 11:00-20:00\n土日祝 10:00-19:00\n定休日: 水曜',
+                    'transfer_available_hours': '平日 14:00-16:00\n土日祝 11:00-17:00（要予約）',
                     'staff': [
                         {'username': 'neko_staff1', 'password': 'staff123'},
                         {'username': 'neko_staff2', 'password': 'staff123'},
@@ -94,6 +96,8 @@ class Command(BaseCommand):
                     'email': 'contact@happycats.jp',
                     'verification_status': 'approved',
                     'description': '大阪で活動する保護猫カフェ併設の団体です。',
+                    'business_hours': '毎日 10:00-18:00\n定休日: なし',
+                    'transfer_available_hours': '毎日 13:00-17:00（事前予約制）',
                     'staff': [
                         {'username': 'happy_staff1', 'password': 'staff123'},
                     ]
@@ -105,6 +109,8 @@ class Command(BaseCommand):
                     'email': 'info@catrescue-fukuoka.org',
                     'verification_status': 'approved',
                     'description': '福岡県内の保護猫を中心に活動しています。',
+                    'business_hours': '火〜日 12:00-19:00\n定休日: 月曜',
+                    'transfer_available_hours': '土日のみ 14:00-18:00（完全予約制）',
                     'staff': []
                 },
                 {
@@ -114,6 +120,8 @@ class Command(BaseCommand):
                     'email': 'new@shelter.org',
                     'verification_status': 'pending',
                     'description': '申請中の新しい団体です。',
+                    'business_hours': '平日のみ 10:00-17:00\n定休日: 土日祝',
+                    'transfer_available_hours': '平日 13:00-16:00（要相談）',
                     'staff': []
                 },
             ]
@@ -143,6 +151,8 @@ class Command(BaseCommand):
                         'address': '〇〇1-2-3',
                         'description': shelter_data['description'],
                         'verification_status': shelter_data['verification_status'],
+                        'business_hours': shelter_data.get('business_hours', ''),
+                        'transfer_available_hours': shelter_data.get('transfer_available_hours', ''),
                     }
                 )
                 shelters.append(shelter)

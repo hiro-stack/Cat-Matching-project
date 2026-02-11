@@ -42,7 +42,7 @@ export interface User {
   profile_image?: string;
   bio?: string;
   created_at?: string;
-  shelter_role?: 'admin' | 'staff' | 'volunteer';
+  shelter_role?: 'admin' | 'staff';
   shelter_info?: {
     id: number;
     name: string;
@@ -100,25 +100,26 @@ export interface CatList {
   created_at: string;
    // API response might include computed fields
   main_image_url?: string;
+  is_favorited?: boolean;
 }
 
 // Cat Detail (Full version)
 export interface CatDetail extends Omit<CatList, 'main_image_url'> {
   color?: string;
   size: Size;
-  
+
   // Health Info
   spay_neuter_status: string;
   vaccination_status: string;
   health_status_category: string;
   fiv_felv_status: string;
   health_notes?: string;
-  
+
   // Personality
   human_distance: string;
   activity_level: string;
   personality: string;
-  
+
   // Transfer Conditions
   interview_format: string;
   trial_period?: string;
@@ -128,7 +129,7 @@ export interface CatDetail extends Omit<CatList, 'main_image_url'> {
   description: string;
   images: CatImage[];
   videos: CatVideo[];
-  
+
   shelter: {
     id: number;
     name: string;
@@ -144,6 +145,7 @@ export interface CatDetail extends Omit<CatList, 'main_image_url'> {
     transfer_available_hours?: string;
   };
   updated_at?: string;
+  is_favorited?: boolean;
 }
 
 export interface CatFilters {
@@ -187,4 +189,14 @@ export interface Message {
   content: string;
   is_read: boolean;
   created_at: string;
+}
+
+export interface ShelterMember {
+  id: number;
+  user_id: number;
+  username: string;
+  email: string;
+  role: 'admin' | 'staff';
+  is_active: boolean;
+  joined_at: string;
 }

@@ -213,14 +213,25 @@ const Header: FC = () => {
                       </Link>
 
                       {user.user_type !== 'shelter' && user.user_type !== 'admin' && (
-                        <Link
-                          href="/profile/applications"
-                          onClick={() => setIsDropdownOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
-                        >
-                          <span className="text-lg">📋</span>
-                          <span className="text-sm font-medium">申請履歴</span>
-                        </Link>
+                        <>
+                          <Link
+                            href="/profile/applications"
+                            onClick={() => setIsDropdownOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <span className="text-lg">📋</span>
+                            <span className="text-sm font-medium">申請履歴</span>
+                          </Link>
+
+                          <Link
+                            href="/profile/favorites"
+                            onClick={() => setIsDropdownOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <span className="text-lg">❤️</span>
+                            <span className="text-sm font-medium">お気に入り一覧</span>
+                          </Link>
+                        </>
                       )}
 
                       {user.user_type === 'shelter' && (

@@ -15,7 +15,7 @@ function LoginForm() {
   const redirect = searchParams.get("redirect") || "/";
 
   const [formData, setFormData] = useState({
-    username: "",
+    email: "",
     password: "",
   });
   const [error, setError] = useState("");
@@ -62,8 +62,13 @@ function LoginForm() {
       console.error("Login error:", err);
       if (err.response?.data?.detail) {
         setError(err.response.data.detail);
+      } else if (err.response?.data) {
+        // フィールドエラーを処理
+        const errorData = err.response.data;
+        const errorMessages = Object.values(errorData).flat().join(" ");
+        setError(errorMessages || "ログインに失敗しました。メールアドレスとパスワードを確認してください。");
       } else {
-        setError("ログインに失敗しました。ユーザー名とパスワードを確認してください。");
+        setError("ログインに失敗しました。メールアドレスとパスワードを確認してください。");
       }
     } finally {
       setIsLoading(false);
@@ -100,20 +105,20 @@ function LoginForm() {
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label
-                  htmlFor="username"
+                  htmlFor="email"
                   className="block text-sm font-medium text-gray-700 mb-1.5"
                 >
-                  ユーザー名
+                  メールアドレス
                 </label>
                 <input
-                  type="text"
-                  id="username"
-                  name="username"
-                  value={formData.username}
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
                   onChange={handleChange}
                   required
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-pink-300 focus:ring-2 focus:ring-pink-100 outline-none transition-all"
-                  placeholder="ユーザー名を入力"
+                  placeholder="メールアドレスを入力"
                 />
               </div>
 
@@ -134,6 +139,15 @@ function LoginForm() {
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-pink-300 focus:ring-2 focus:ring-pink-100 outline-none transition-all"
                   placeholder="パスワードを入力"
                 />
+              </div>
+
+              <div className="flex justify-end">
+                <Link
+                  href="/forgot-password"
+                  className="text-sm font-medium text-pink-500 hover:text-pink-600 hover:underline"
+                >
+                  パスワードを忘れた場合
+                </Link>
               </div>
 
               <button

@@ -48,7 +48,7 @@ export default function ProfileEditPage() {
     fetchProfile();
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     
     if (type === 'checkbox') {
@@ -134,6 +134,7 @@ export default function ProfileEditPage() {
               <section>
                 <h2 className="text-lg font-bold text-pink-600 border-b border-pink-100 pb-2 mb-4">基本情報</h2>
                 
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">年齢 <span className="text-red-500">*</span></label>

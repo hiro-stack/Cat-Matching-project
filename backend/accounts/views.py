@@ -180,12 +180,21 @@ class PasswordResetConfirmView(APIView):
         new_password = serializer.validated_data['new_password']
 
         try:
-            uid = force_str(urlsafe_base64_decode(uid))
-            user = User.objects.get(pk=uid)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            # デバッグログを追加
+            # print(f"Received UID: {uid}")
+            # print(f"Received Token: {token}")
+            
+            # UIDのデコード
+            decoded_uid = force_str(urlsafe_base64_decode(uid))
+            # print(f"Decoded UID: {decoded_uid}")
+            
+            user = User.objects.get(pk=decoded_uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist) as e:
+            print(f"Password reset error (Invalid UID): {e}, uid: {uid}")
             return Response({"detail": "無効なリンクです。"}, status=status.HTTP_400_BAD_REQUEST)
 
         if not default_token_generator.check_token(user, token):
+            print(f"Password reset error (Invalid Token): user={user.id}, token={token}")
             return Response({"detail": "トークンが無効または期限切れです。"}, status=status.HTTP_400_BAD_REQUEST)
 
         # パスワード設定

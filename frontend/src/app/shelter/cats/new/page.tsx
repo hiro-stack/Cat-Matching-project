@@ -8,6 +8,7 @@ import api from "@/lib/api";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
 import { Image as ImageIcon, Plus, X } from "lucide-react";
+import { compressImage } from "@/utils/image";
 
 interface CatFormData {
   name: string;
@@ -151,6 +152,8 @@ export default function NewCatPage() {
     }
   };
 
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -163,11 +166,14 @@ export default function NewCatPage() {
 
       // 2. 画像があればアップロード
       if (selectedImage) {
-        const imageFormData = new FormData();
-        imageFormData.append("image", selectedImage);
-        imageFormData.append("is_primary", "true");
-
         try {
+          // 画像を圧縮してからアップロード
+          const compressedFile = await compressImage(selectedImage);
+          
+          const imageFormData = new FormData();
+          imageFormData.append("image", compressedFile);
+          imageFormData.append("is_primary", "true");
+
           await api.post(`/api/cats/${catId}/images/`, imageFormData, {
             headers: {
               "Content-Type": "multipart/form-data",
@@ -204,11 +210,14 @@ export default function NewCatPage() {
 
         if (Object.keys(fieldErrors).length > 0) {
           setErrors(fieldErrors);
+          window.scrollTo({ top: 0, behavior: "smooth" });
         } else {
           setErrors({ general: "登録に失敗しました。" });
+          window.scrollTo({ top: 0, behavior: "smooth" });
         }
       } else {
         setErrors({ general: "登録に失敗しました。しばらく経ってから再度お試しください。" });
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }
     } finally {
       setIsLoading(false);

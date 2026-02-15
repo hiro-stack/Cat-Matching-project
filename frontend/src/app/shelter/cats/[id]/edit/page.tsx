@@ -9,6 +9,7 @@ import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
 import { CatDetail, CatImage, CatVideo } from "@/types";
 import { Image as ImageIcon, Video as VideoIcon, Plus, X, Upload } from "lucide-react";
+import { compressImage } from "@/utils/image";
 
 interface CatFormData {
   name: string;
@@ -228,6 +229,8 @@ function EditCatForm({ params }: { params: { id: string } }) {
     e.target.value = '';
   };
 
+
+
   // アップロード処理
   const processUpload = async () => {
     if (!pendingFile) return;
@@ -235,19 +238,21 @@ function EditCatForm({ params }: { params: { id: string } }) {
     setIsUploading(true);
     const formData = new FormData();
     
-    if (pendingFile.type === 'image') {
-      formData.append("image", pendingFile.file);
-      formData.append("is_primary", (!cat?.images || cat.images.length === 0) ? "true" : "false");
-    } else {
-      formData.append("video", pendingFile.file);
-    }
-    
-    // キャプション追加
-    if (pendingFile.caption) {
-      formData.append("caption", pendingFile.caption);
-    }
-
     try {
+      if (pendingFile.type === 'image') {
+        // 画像を圧縮してからアップロード
+        const compressedFile = await compressImage(pendingFile.file);
+        formData.append("image", compressedFile);
+        formData.append("is_primary", (!cat?.images || cat.images.length === 0) ? "true" : "false");
+      } else {
+        formData.append("video", pendingFile.file);
+      }
+      
+      // キャプション追加
+      if (pendingFile.caption) {
+        formData.append("caption", pendingFile.caption);
+      }
+
       const endpoint = pendingFile.type === 'image' 
         ? `/api/cats/${idValue}/images/` 
         : `/api/cats/${idValue}/videos/`;

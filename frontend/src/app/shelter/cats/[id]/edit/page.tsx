@@ -1068,7 +1068,7 @@ function EditCatForm({ params }: { params: { id: string } }) {
                     )}
                   </div>
                   
-                  <div className="relative inline-flex items-center cursor-pointer">
+                  <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
                       id="is_public"
@@ -1079,7 +1079,7 @@ function EditCatForm({ params }: { params: { id: string } }) {
                       className="sr-only peer"
                     />
                     <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
-                  </div>
+                  </label>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-50">

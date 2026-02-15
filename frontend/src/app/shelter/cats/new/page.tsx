@@ -697,20 +697,15 @@ export default function NewCatPage() {
                     {user?.shelter_info?.verification_status !== 'approved' && (
                       <div className="p-3 bg-orange-50 rounded-xl border border-orange-100 flex items-start gap-2 mb-4">
                         <span className="text-orange-500 text-lg">⚠️</span>
-                        <div className="text-xs text-orange-800 leading-relaxed font-medium">
-                          <p>
-                            現在、団体情報の審査中です。<br />
-                            運営による承認が完了するまで、「公開」に設定することはできません。
-                          </p>
-                          <p className="mt-2 font-bold bg-orange-100 inline-block px-2 py-1 rounded text-orange-900">
-                            現在のステータス: {user?.shelter_info?.verification_status || '取得できませんでした'}
-                          </p>
-                        </div>
+                        <p className="text-xs text-orange-800 leading-relaxed font-medium">
+                          現在、団体情報の審査中です。<br />
+                          運営による承認が完了するまで、「公開」に設定することはできません。
+                        </p>
                       </div>
                     )}
                   </div>
                   
-                  <div className="relative inline-flex items-center cursor-pointer">
+                  <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
                       id="is_public"
@@ -721,7 +716,7 @@ export default function NewCatPage() {
                       className="sr-only peer"
                     />
                     <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
-                  </div>
+                  </label>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-50">

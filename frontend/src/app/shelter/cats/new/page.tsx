@@ -697,10 +697,15 @@ export default function NewCatPage() {
                     {user?.shelter_info?.verification_status !== 'approved' && (
                       <div className="p-3 bg-orange-50 rounded-xl border border-orange-100 flex items-start gap-2 mb-4">
                         <span className="text-orange-500 text-lg">⚠️</span>
-                        <p className="text-xs text-orange-800 leading-relaxed font-medium">
-                          現在、団体情報の審査中です。<br />
-                          運営による承認が完了するまで、「公開」に設定することはできません。
-                        </p>
+                        <div className="text-xs text-orange-800 leading-relaxed font-medium">
+                          <p>
+                            現在、団体情報の審査中です。<br />
+                            運営による承認が完了するまで、「公開」に設定することはできません。
+                          </p>
+                          <p className="mt-2 font-bold bg-orange-100 inline-block px-2 py-1 rounded text-orange-900">
+                            現在のステータス: {user?.shelter_info?.verification_status || '取得できませんでした'}
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>

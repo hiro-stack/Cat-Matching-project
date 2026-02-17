@@ -182,7 +182,20 @@ export default function ShelterApplicationDetailPage() {
 
     setIsUpdatingStatus(true);
     try {
-      // お見送りの場合はメッセージを先に送る
+      // 1. 最新状態を再取得（古い状態での操作を防止）
+      const latestRes = await api.get(`/api/applications/${applicationId}/`);
+      const latestApp = latestRes.data;
+      
+      // 2. クライアント側で遷移可能か事前チェック
+      const currentStatus = latestApp.status;
+      if (currentStatus !== application?.status) {
+        // サーバー側のステータスがクライアントと異なる場合、画面を更新
+        setApplication(latestApp);
+        alert(`ステータスが「${getStatusLabel(currentStatus)}」に変更されています。画面を更新しました。`);
+        return;
+      }
+
+      // 3. お見送りの場合はメッセージを先に送る
       if (newStatus === 'rejected' && reason) {
         await api.post("/api/messages/", {
           application_id: Number(applicationId),
@@ -190,13 +203,29 @@ export default function ShelterApplicationDetailPage() {
         });
       }
 
-      await api.patch(`/api/applications/${applicationId}/status/`, {
+      // 4. ステータス更新
+      const result = await api.patch(`/api/applications/${applicationId}/status/`, {
         status: newStatus,
       });
+
+      // 5. 最新データで画面を更新
       await fetchData();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to update status:", err);
-      alert("更新に失敗しました。現在のステータスからは変更できない可能性があります。");
+      
+      // バリデーションエラーの場合、具体的なメッセージを表示
+      const errorData = err.response?.data;
+      if (errorData?.status) {
+        const msg = Array.isArray(errorData.status) ? errorData.status[0] : errorData.status;
+        const allowed = errorData.allowed_transitions;
+        const allowedDisplay = allowed?.map((s: string) => getStatusLabel(s)).join('、');
+        alert(`${msg}${allowedDisplay ? `\n\n変更可能なステータス: ${allowedDisplay}` : ''}`);
+      } else {
+        alert("更新に失敗しました。ページを再読み込みしてお試しください。");
+      }
+      
+      // エラー時も最新状態を反映
+      await fetchData();
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -296,37 +325,49 @@ export default function ShelterApplicationDetailPage() {
                 <button
                   onClick={() => handleUpdateStatus('reviewing')}
                   disabled={isUpdatingStatus}
-                  className="whitespace-nowrap flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all shadow-sm text-sm font-bold"
+                  className="whitespace-nowrap flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all shadow-sm text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <MessageCircle className="w-4 h-4" />
-                  対応を開始（チャットを有効化）
+                  {isUpdatingStatus ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  ) : (
+                    <MessageCircle className="w-4 h-4" />
+                  )}
+                  {isUpdatingStatus ? '処理中...' : '対応を開始（チャットを有効化）'}
                 </button>
               )}
               {application.status === 'reviewing' && (
                 <button
                   onClick={() => handleUpdateStatus('trial')}
                   disabled={isUpdatingStatus}
-                  className="whitespace-nowrap flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all shadow-sm text-sm font-bold"
+                  className="whitespace-nowrap flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all shadow-sm text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Clock className="w-4 h-4" />
-                  トライアル開始
+                  {isUpdatingStatus ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  ) : (
+                    <Clock className="w-4 h-4" />
+                  )}
+                  {isUpdatingStatus ? '処理中...' : 'トライアル開始'}
                 </button>
               )}
               {application.status === 'trial' && (
                 <button
                   onClick={() => handleUpdateStatus('accepted')}
                   disabled={isUpdatingStatus}
-                  className="whitespace-nowrap flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow-sm text-sm font-bold"
+                  className="whitespace-nowrap flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow-sm text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
-                  譲渡を確定（完了）
+                  {isUpdatingStatus ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4" />
+                  )}
+                  {isUpdatingStatus ? '処理中...' : '譲渡を確定（完了）'}
                 </button>
               )}
               {(['pending', 'reviewing', 'trial'].includes(application.status)) && (
                 <button
                   onClick={() => handleUpdateStatus('rejected')}
                   disabled={isUpdatingStatus}
-                  className="whitespace-nowrap flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-all text-sm font-medium"
+                  className="whitespace-nowrap flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <XCircle className="w-4 h-4" />
                   見送り

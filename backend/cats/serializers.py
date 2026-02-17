@@ -118,7 +118,7 @@ class CatDetailSerializer(serializers.ModelSerializer):
             # 譲渡条件
             'interview_format', 'trial_period', 'transfer_fee', 'fee_details',
 
-            'description', 'status',
+            'description', 'status', 'is_public',
             'images', 'videos', 'primary_image', 'shelter', 'shelter_name',
             'created_at', 'updated_at', 'is_favorited'
         ]
@@ -153,7 +153,7 @@ class CatCreateUpdateSerializer(serializers.ModelSerializer):
             'fiv_felv_status', 'health_notes',
             'human_distance', 'activity_level', 'personality',
             'interview_format', 'trial_period', 'transfer_fee', 'fee_details',
-            'description', 'status'
+            'description', 'status', 'is_public'
         ]
 
     def __init__(self, *args, **kwargs):

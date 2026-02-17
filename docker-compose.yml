@@ -43,6 +43,7 @@ services:
       - ALLOWED_HOSTS=*
       - EMAIL_HOST_USER=zhanghiromo@gmail.com
       - EMAIL_HOST_PASSWORD=dkau tizh ihxt qfvy
+      - FRONTEND_URL=http://localhost:3000
 
   frontend:
     build: ./frontend

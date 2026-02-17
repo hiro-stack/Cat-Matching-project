@@ -36,7 +36,7 @@ class ShelterViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='verify')
     def verify(self, request, pk=None):
-        """運営管理者による団体の審査・承認アクション"""
+        """運営管理者による団体の審査・承認アクション（権限昇格 + メール通知付き）"""
         if not request.user.is_superuser:
             return Response({"detail": "権限がありません。"}, status=status.HTTP_403_FORBIDDEN)
             
@@ -46,16 +46,73 @@ class ShelterViewSet(viewsets.ModelViewSet):
         
         if new_status not in dict(Shelter.VERIFICATION_STATUS_CHOICES):
             return Response({"detail": "不正なステータスです。"}, status=status.HTTP_400_BAD_REQUEST)
-            
+        
+        old_status = shelter.verification_status
         shelter.verification_status = new_status
         shelter.review_message = review_message
-        
-        # 承認時はメッセージをクリアする運用もあり
-        if new_status == 'approved':
-            # 必要ならメール送信ロジックをここに
-            pass
-            
         shelter.save()
+        
+        # 承認時: メンバーの権限を昇格 + メール通知
+        if new_status == 'approved':
+            for su in ShelterUser.objects.filter(shelter=shelter, is_active=True).select_related('user'):
+                if su.user.user_type != 'shelter' and not su.user.is_superuser:
+                    su.user.user_type = 'shelter'
+                    su.user.save(update_fields=['user_type'])
+            
+            # 承認通知メール
+            try:
+                from accounts.email_utils import send_tracked_email
+                admin_user = ShelterUser.objects.filter(
+                    shelter=shelter, role='admin', is_active=True
+                ).select_related('user').first()
+                if admin_user:
+                    send_tracked_email(
+                        email_type='shelter_approval',
+                        to_email=admin_user.user.email,
+                        subject='【保護猫マッチング】団体登録が承認されました',
+                        body=f"""
+{shelter.name} 様
+
+保護団体の登録申請が承認されました。
+猫の登録・公開が可能になりました。
+
+管理画面からご利用ください。
+""",
+                        related_user=admin_user.user,
+                    )
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Failed to send approval email: {e}")
+        
+        # 否認/修正依頼時: メール通知
+        elif new_status in ['rejected', 'need_fix']:
+            try:
+                from accounts.email_utils import send_tracked_email
+                admin_user = ShelterUser.objects.filter(
+                    shelter=shelter, role='admin', is_active=True
+                ).select_related('user').first()
+                if admin_user:
+                    type_label = '否認' if new_status == 'rejected' else '修正依頼'
+                    send_tracked_email(
+                        email_type='shelter_rejection',
+                        to_email=admin_user.user.email,
+                        subject=f'【保護猫マッチング】団体登録の{type_label}について',
+                        body=f"""
+{shelter.name} 様
+
+保護団体の登録申請について、以下の理由で{type_label}とさせていただきました。
+
+理由:
+{review_message or '（詳細は管理画面をご確認ください）'}
+
+ご不明な点がございましたら、サポートまでお問い合わせください。
+""",
+                        related_user=admin_user.user,
+                    )
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Failed to send rejection email: {e}")
+            
         return Response(self.get_serializer(shelter).data)
 
     def update(self, request, *args, **kwargs):

@@ -51,11 +51,10 @@ class CatListCreateView(generics.ListCreateAPIView):
         # select_related を使用してN+1問題を回避し、フィルター精度を向上
         queryset = Cat.objects.select_related('shelter').all()
 
-        # 一般公開用一覧は、公開設定がONのもののみ
-        # (団体管理画面用覧 MyCatsView は別途存在し、そちらは全件表示する)
-        user = self.request.user
-        if not (user.is_authenticated and (user.user_type == 'shelter' or user.user_type == 'admin' or user.is_superuser)):
-            queryset = queryset.filter(is_public=True)
+        # 一般公開用一覧は、"常に" 公開設定がONのもののみ表示する
+        # シェルターユーザーであっても、トップページの一覧では公開猫のみ
+        # (自分の団体の全猫一覧は /api/cats/my_cats/ で確認する)
+        queryset = queryset.filter(is_public=True)
         
         # 検索フィルター (キーワード検索)
         # 性格詳細、団体名、都道府県、市区町村も検索対象に含める
@@ -121,8 +120,32 @@ class CatListCreateView(generics.ListCreateAPIView):
 class CatDetailView(generics.RetrieveUpdateDestroyAPIView):
     """保護猫詳細・更新・削除API"""
     
-    queryset = Cat.objects.all()
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    
+    def get_queryset(self):
+        queryset = Cat.objects.select_related('shelter').all()
+        
+        # PUT/PATCH/DELETE の場合は全猫を対象（権限チェックは perform_update/destroy で行う）
+        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
+            return queryset
+        
+        # GETの場合: 公開猫は誰でも閲覧可能
+        # 非公開猫は、その団体のメンバーまたは管理者のみ閲覧可能
+        user = self.request.user
+        if user.is_authenticated and (user.is_superuser or user.user_type in ['shelter', 'admin']):
+            # シェルターユーザー/管理者: 公開猫 + 自分の団体の非公開猫
+            from django.db.models import Q
+            shelter_ids = ShelterUser.objects.filter(
+                user=user, is_active=True
+            ).values_list('shelter_id', flat=True)
+            queryset = queryset.filter(
+                Q(is_public=True) | Q(shelter_id__in=shelter_ids)
+            )
+        else:
+            # 一般ユーザー/未ログイン: 公開猫のみ
+            queryset = queryset.filter(is_public=True)
+        
+        return queryset
     
     def get_serializer_class(self):
         if self.request.method in ['PUT', 'PATCH']:

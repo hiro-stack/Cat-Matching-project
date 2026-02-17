@@ -65,7 +65,7 @@ export interface AuthResponse {
 export type Gender = 'male' | 'female' | 'unknown';
 export type Size = 'small' | 'medium' | 'large';
 export type CatStatus = 'open' | 'in_review' | 'trial' | 'adopted' | 'paused';
-export type ApplicationStatus = 'pending' | 'reviewing' | 'accepted' | 'rejected' | 'cancelled';
+export type ApplicationStatus = 'pending' | 'reviewing' | 'trial' | 'accepted' | 'rejected' | 'cancelled';
 
 export interface CatImage {
   id: number;

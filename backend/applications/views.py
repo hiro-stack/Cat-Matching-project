@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.serializers import ValidationError
 from django.shortcuts import get_object_or_404
-from django.db import models as django_models
+from django.db import models as django_models, transaction
 from .models import Application, Message
 from shelters.models import Shelter, ShelterUser
 from .serializers import (
@@ -127,7 +127,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         return Response({"detail": "権限がありません。"}, status=status.HTTP_403_FORBIDDEN)
 
     def create(self, request, *args, **kwargs):
-        """応募作成（既存チェック付き）"""
+        """応募作成（冪等化 + 競合防止付き）"""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
@@ -138,19 +138,25 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         if cat.shelter.verification_status != 'approved':
             raise ValidationError("現在この団体への応募は受け付けておりません（団体審査中）。")
 
-        # 既存の有効な応募があるかチェック（重複応募防止）
-        existing_application = Application.objects.filter(
-            applicant=user,
-            cat=cat,
-            status__in=['pending', 'reviewing', 'accepted']
-        ).first()
+        # select_for_update で競合防止（同時リクエストを直列化）
+        with transaction.atomic():
+            existing_application = Application.objects.select_for_update().filter(
+                applicant=user,
+                cat=cat,
+                status__in=['pending', 'reviewing', 'trial', 'accepted']
+            ).first()
 
-        if existing_application:
-            # 既に存在する場合はそのIDを返して、フロントエンドでリダイレクトさせる
-            # 200 OK を返すことで「作成成功（ただし既存）」として扱う
-            return Response({'id': existing_application.id, 'detail': '既に応募済みです。メッセージ画面へ移動します。'}, status=status.HTTP_200_OK)
+            if existing_application:
+                # 冪等: 既に存在する場合は同じ結果を返す
+                return Response({
+                    'id': existing_application.id,
+                    'status': existing_application.status,
+                    'updated_at': existing_application.updated_at.isoformat(),
+                    'detail': '既に応募済みです。メッセージ画面へ移動します。'
+                }, status=status.HTTP_200_OK)
 
-        self.perform_create(serializer)
+            self.perform_create(serializer)
+        
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
@@ -167,7 +173,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['patch'], url_path='status')
     def update_status(self, request, pk=None):
-        """ステータス更新アクション"""
+        """ステータス更新アクション（状態マシン + 競合防止）"""
         application = self.get_object()
         user = request.user
         
@@ -176,7 +182,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         if user.user_type == 'shelter':
             is_shelter_member = ShelterUser.objects.filter(
                 user=user,
-                shelter_id=application.shelter_id, # 冗長フィールドを活用
+                shelter_id=application.shelter_id,
                 is_active=True
             ).exists()
             
@@ -185,12 +191,25 @@ class ApplicationViewSet(viewsets.ModelViewSet):
                  {"detail": "この操作を行う権限がありません。"},
                  status=status.HTTP_403_FORBIDDEN
              )
-             
-        serializer = self.get_serializer(application, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
         
-        return Response(serializer.data)
+        # select_for_update で競合防止（同時更新を直列化）
+        with transaction.atomic():
+            application = Application.objects.select_for_update().get(pk=application.pk)
+            
+            serializer = self.get_serializer(application, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+        
+        # レスポンスに現在状態 + 次に可能なアクションを含める
+        return Response({
+            'id': application.id,
+            'status': application.status,
+            'status_display': application.get_status_display(),
+            'updated_at': application.updated_at.isoformat(),
+            'allowed_actions': ApplicationStatusUpdateSerializer.ALLOWED_TRANSITIONS.get(
+                application.status, []
+            ),
+        })
 
 
 class MessageViewSet(viewsets.ModelViewSet):

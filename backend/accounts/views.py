@@ -52,12 +52,11 @@ class ShelterRegistrationView(generics.CreateAPIView):
         
         refresh = RefreshToken.for_user(user)
         
-        # 管理者へ通知メール送信
+        # 管理者へ通知メール送信（追跡可能）
         try:
-            from django.core.mail import send_mail
+            from .email_utils import send_tracked_email
             from shelters.models import ShelterUser
             
-            # 作成されたばかりの団体情報を取得
             shelter_user = ShelterUser.objects.filter(user=user).select_related('shelter').first()
             shelter_name = shelter_user.shelter.name if shelter_user and shelter_user.shelter else '（団体名不明）'
             
@@ -72,14 +71,18 @@ class ShelterRegistrationView(generics.CreateAPIView):
 
 審査管理画面: {admin_frontend_url}/admin/shelters
             """
-            from_email = 'system@example.com'
-            recipient_list = ['zhanghiromo@gmail.com']
             
-            send_mail(subject, message, from_email, recipient_list)
-            print(f"Notification email sent to {recipient_list}")
+            send_tracked_email(
+                email_type='shelter_registration',
+                to_email='zhanghiromo@gmail.com',
+                subject=subject,
+                body=message,
+                related_user=user,
+            )
         except Exception as e:
             # メールの失敗で登録自体を失敗させない
-            print(f"Failed to send notification email: {e}")
+            import logging
+            logging.getLogger(__name__).error(f"Failed to send notification email: {e}")
         
         return Response({
             'user': UserPrivateSerializer(user).data,
@@ -92,19 +95,38 @@ class ShelterRegistrationView(generics.CreateAPIView):
 
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
-    """ユーザープロフィール取得・更新API"""
+    """ユーザープロフィール取得・更新API（申請状態付き）"""
     
     permission_classes = [permissions.IsAuthenticated]
     
     def get_serializer_class(self):
-        # 更新時(PUT/PATCH)は、更新可能なフィールドのみを定義した専用シリアライザーを使用
         if self.request.method in ['PUT', 'PATCH']:
             return UserMeUpdateSerializer
-        # 取得時(GET)は、すべての個人情報を含むシリアライザーを使用
         return UserPrivateSerializer
     
     def get_object(self):
         return self.request.user
+    
+    def retrieve(self, request, *args, **kwargs):
+        """GET /api/accounts/profile/ - 申請状態を含むレスポンス"""
+        user = request.user
+        data = self.get_serializer(user).data
+        
+        # 申請中の団体情報を追加（フロントが画面分岐に使用）
+        from shelters.models import ShelterUser
+        shelter_membership = ShelterUser.objects.filter(
+            user=user, is_active=True
+        ).select_related('shelter').first()
+        
+        if shelter_membership:
+            data['shelter_status'] = shelter_membership.shelter.verification_status
+            data['shelter_id'] = shelter_membership.shelter.id
+            data['shelter_name'] = shelter_membership.shelter.name
+        else:
+            data['shelter_status'] = None
+            data['shelter_id'] = None
+        
+        return Response(data)
 
 
 # メールアドレスでログインするカスタムビュー
@@ -142,9 +164,26 @@ class PasswordResetRequestView(APIView):
         token = default_token_generator.make_token(user)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
 
-        # メール送信
-        # フロントエンドURLを環境変数から取得
-        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000').rstrip('/')
+        # フロントエンドURLの取得（環境変数 > Originヘッダ > Refererヘッダ > localhost）
+        frontend_url = os.environ.get('FRONTEND_URL')
+        if not frontend_url:
+            # 環境変数がなければリクエストヘッダから推測
+            origin = request.META.get('HTTP_ORIGIN')
+            if origin:
+                frontend_url = origin
+            else:
+                referer = request.META.get('HTTP_REFERER')
+                if referer:
+                    # 末尾のパスを削除してベースURLを取得 (例: http://site.com/forgot-password/ -> http://site.com)
+                    from urllib.parse import urlparse
+                    parsed = urlparse(referer)
+                    frontend_url = f"{parsed.scheme}://{parsed.netloc}"
+        
+        # それでも取れなければデフォルト
+        if not frontend_url:
+            frontend_url = 'http://localhost:3000'
+            
+        frontend_url = frontend_url.rstrip('/')
         reset_link = f"{frontend_url}/reset-password/{uid}/{token}"
         
         subject = "【保護猫マッチング】パスワードリセット"
@@ -157,13 +196,21 @@ class PasswordResetRequestView(APIView):
 ※このリンクは有効期限があります。
 お心当たりがない場合は、このメールを破棄してください。
         """
-        from_email = "system@example.com"
         
-        try:
-            send_mail(subject, message, from_email, [email])
-        except Exception as e:
-            print(f"Failed to send email: {e}")
-            return Response({"detail": "メール送信に失敗しました。"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        from .email_utils import send_tracked_email
+        success, email_log = send_tracked_email(
+            email_type='password_reset',
+            to_email=email,
+            subject=subject,
+            body=message,
+            related_user=user,
+        )
+        
+        if not success:
+            return Response(
+                {"detail": "メール送信に失敗しました。しばらく待ってから再度お試しください。"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
         return Response({"detail": "パスワードリセットメールを送信しました。"}, status=status.HTTP_200_OK)
 

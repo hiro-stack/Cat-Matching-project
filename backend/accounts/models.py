@@ -221,3 +221,117 @@ class ApplicantProfile(models.Model):
     
     def __str__(self):
         return f"{self.user.username}'s Profile"
+
+
+class EmailLog(models.Model):
+    """メール送信ログ
+    
+    全てのメール送信を記録し、管理画面から送信結果を追跡可能にする。
+    失敗時はリトライ管理コマンドで再送信可能。
+    """
+    
+    STATUS_CHOICES = [
+        ('pending', '送信待ち'),
+        ('sent', '送信済み'),
+        ('failed', '失敗'),
+    ]
+    
+    TYPE_CHOICES = [
+        ('password_reset', 'パスワードリセット'),
+        ('shelter_registration', '団体登録通知'),
+        ('shelter_approval', '団体承認通知'),
+        ('shelter_rejection', '団体否認通知'),
+        ('application_status', '応募ステータス変更'),
+        ('other', 'その他'),
+    ]
+    
+    email_type = models.CharField(
+        max_length=50,
+        choices=TYPE_CHOICES,
+        verbose_name='メール種別'
+    )
+    to_email = models.EmailField(verbose_name='送信先')
+    from_email = models.EmailField(
+        default='noreply@example.com',
+        verbose_name='送信元'
+    )
+    subject = models.CharField(max_length=200, verbose_name='件名')
+    body = models.TextField(verbose_name='本文')
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        verbose_name='送信状態'
+    )
+    error_message = models.TextField(blank=True, verbose_name='エラーメッセージ')
+    
+    related_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='email_logs',
+        verbose_name='関連ユーザー'
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='作成日時')
+    sent_at = models.DateTimeField(null=True, blank=True, verbose_name='送信日時')
+    retry_count = models.PositiveSmallIntegerField(default=0, verbose_name='リトライ回数')
+    max_retries = models.PositiveSmallIntegerField(default=3, verbose_name='最大リトライ回数')
+    
+    class Meta:
+        verbose_name = 'メール送信ログ'
+        verbose_name_plural = 'メール送信ログ'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', 'created_at']),
+            models.Index(fields=['email_type']),
+            models.Index(fields=['to_email']),
+        ]
+    
+    def __str__(self):
+        return f"[{self.get_status_display()}] {self.email_type}: {self.to_email}"
+
+
+class AuditLog(models.Model):
+    """監査ログ
+    
+    ユーザー・団体・猫・応募など主要モデルの変更履歴を記録する。
+    「消えた/抜けた」が起きた時に原因追跡が可能。
+    """
+    
+    ACTION_CHOICES = [
+        ('create', '作成'),
+        ('update', '更新'),
+        ('delete', '削除'),
+    ]
+    
+    model_name = models.CharField(max_length=100, verbose_name='モデル名')
+    object_id = models.PositiveIntegerField(verbose_name='オブジェクトID')
+    object_repr = models.CharField(max_length=200, blank=True, verbose_name='オブジェクト表現')
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES, verbose_name='操作')
+    changes = models.JSONField(default=dict, verbose_name='変更内容')
+    actor = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audit_logs',
+        verbose_name='実行者'
+    )
+    ip_address = models.GenericIPAddressField(null=True, blank=True, verbose_name='IPアドレス')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='実行日時')
+    
+    class Meta:
+        verbose_name = '監査ログ'
+        verbose_name_plural = '監査ログ'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['model_name', 'object_id']),
+            models.Index(fields=['actor']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['action']),
+        ]
+    
+    def __str__(self):
+        return f"[{self.get_action_display()}] {self.model_name}#{self.object_id} by {self.actor}"

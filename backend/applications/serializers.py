@@ -124,16 +124,27 @@ class ApplicationCreateSerializer(serializers.ModelSerializer):
 
 
 class ApplicationStatusUpdateSerializer(serializers.ModelSerializer):
-    """応募ステータス更新用シリアライザー"""
+    """応募ステータス更新用シリアライザー（状態マシン付き）"""
+    
+    # 許可される状態遷移マップ
+    ALLOWED_TRANSITIONS = {
+        'pending':   ['reviewing', 'cancelled'],
+        'reviewing': ['trial', 'rejected', 'cancelled'],
+        'trial':     ['accepted', 'rejected', 'cancelled'],
+        'accepted':  [],  # 完了 → 変更不可
+        'rejected':  [],  # 完了 → 変更不可
+        'cancelled': [],  # 完了 → 変更不可
+    }
     
     class Meta:
         model = Application
         fields = ['status']
     
     def validate(self, attrs):
-        """インスタンスの状態に基づくバリデーション
+        """状態マシンに基づくバリデーション
         
-        完了状態（成立・不成立・キャンセル）からのステータス変更を禁止する。
+        ALLOWED_TRANSITIONS に定義されていない遷移は拒否する。
+        同一ステータスの再送信は冪等的に成功を返す。
         """
         if not self.instance:
             return attrs
@@ -141,13 +152,19 @@ class ApplicationStatusUpdateSerializer(serializers.ModelSerializer):
         current_status = self.instance.status
         new_status = attrs.get('status')
         
+        # 同一ステータスなら冪等的に成功
         if new_status == current_status:
             return attrs
 
-        if current_status in ['accepted', 'rejected', 'cancelled']:
-            raise serializers.ValidationError(
-                f"現在のステータス（{self.instance.get_status_display()}）からは変更できません。"
-            )
+        allowed = self.ALLOWED_TRANSITIONS.get(current_status, [])
+        if new_status not in allowed:
+            status_display = dict(Application.STATUS_CHOICES)
+            raise serializers.ValidationError({
+                'status': f'「{status_display.get(current_status, current_status)}」から'
+                          f'「{status_display.get(new_status, new_status)}」への変更はできません。',
+                'current_status': current_status,
+                'allowed_transitions': allowed,
+            })
             
         return attrs
 

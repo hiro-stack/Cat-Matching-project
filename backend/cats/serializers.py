@@ -147,6 +147,7 @@ class CatCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cat
         fields = [
+            'id',  # IDをレスポンスに含めるために追加
             'name', 'gender', 'age_category', 'estimated_age',
             'breed', 'size', 'color', 
             'spay_neuter_status', 'vaccination_status', 'health_status_category', 

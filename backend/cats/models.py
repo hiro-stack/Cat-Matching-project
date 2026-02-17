@@ -146,19 +146,50 @@ class Cat(models.Model):
         verbose_name='ウイルス検査（FIV/FeLV）'
     )
     
-    # --- 性格（カフェで分かる範囲） ---
+    # --- 性格・特徴 ---
     
-    HUMAN_DISTANCE_CHOICES = [
-        ('cuddly', '抱っこ好き'),
-        ('ok', '抱っこ可'),
-        ('shy', '抱っこ苦手'),
-        ('unknown', '不明'),
+    AFFECTION_LEVEL_CHOICES = [
+        (5, 'とろとろ甘えん坊（膝乗り・抱っこ大好き）'),
+        (4, '甘えん坊（ナデナデ大好き）'),
+        (3, 'ツンデレ・気まぐれ（気が向くと甘える）'),
+        (2, 'クール・マイペース（適度な距離感）'),
+        (1, '怖がり・修行中（ゆっくり仲良くなろう）'),
     ]
-    human_distance = models.CharField(
+    affection_level = models.PositiveSmallIntegerField(
+        choices=AFFECTION_LEVEL_CHOICES,
+        default=3,
+        verbose_name='甘えん坊度'
+    )
+    
+    MAINTENANCE_LEVEL_CHOICES = [
+        ('easy', '初心者でも安心（協力的）'),
+        ('normal', '少しコツが必要（普通）'),
+        ('hard', '経験者向き（要練習）'),
+    ]
+    maintenance_level = models.CharField(
         max_length=20,
-        choices=HUMAN_DISTANCE_CHOICES,
-        default='unknown',
-        verbose_name='人への距離感（抱っこ）'
+        choices=MAINTENANCE_LEVEL_CHOICES,
+        default='normal',
+        verbose_name='お手入れ難易度',
+        help_text='爪切り・投薬・ブラッシングなどのしやすさ'
+    )
+    
+    # --- 譲渡条件 ---
+    
+    is_single_ok = models.BooleanField(
+        default=False, 
+        verbose_name='単身者応募可'
+    )
+    
+    is_elderly_ok = models.BooleanField(
+        default=False, 
+        verbose_name='高齢者応募可'
+    )
+    
+    other_terms = models.TextField(
+        blank=True,
+        verbose_name='その他譲渡条件',
+        help_text='例: ペット可物件必須、脱走防止対策必須など'
     )
     
     ACTIVITY_LEVEL_CHOICES = [

@@ -12,6 +12,7 @@ import { User, CatList } from "@/types";
 interface Stats {
   totalCats: number;
   openCats: number;
+  trialCats: number;
   adoptedCats: number;
   totalApplications: number;
   pendingApplications: number;
@@ -28,6 +29,7 @@ export default function ShelterDashboardPage() {
   const [stats, setStats] = useState<Stats>({
     totalCats: 0,
     openCats: 0,
+    trialCats: 0,
     adoptedCats: 0,
     totalApplications: 0,
     pendingApplications: 0,
@@ -66,12 +68,13 @@ export default function ShelterDashboardPage() {
             applicationsPromise,
           ]);
 
-          let catStats = { total: 0, open: 0, adopted: 0 };
+          let catStats = { total: 0, open: 0, trial: 0, adopted: 0 };
           if (catsResult.status === 'fulfilled') {
             const cats = catsResult.value.data.results || catsResult.value.data;
             catStats = {
               total: catsResult.value.data.count || cats.length,
               open: cats.filter((c: any) => c.status === "open").length,
+              trial: cats.filter((c: any) => c.status === "trial").length,
               adopted: cats.filter((c: any) => c.status === "adopted").length,
             };
           }
@@ -88,6 +91,7 @@ export default function ShelterDashboardPage() {
           setStats({
             totalCats: catStats.total,
             openCats: catStats.open,
+            trialCats: catStats.trial,
             adoptedCats: catStats.adopted,
             totalApplications: appStats.total,
             pendingApplications: appStats.pending,
@@ -135,11 +139,11 @@ export default function ShelterDashboardPage() {
       <main className="pt-24 pb-16 px-4">
         <div className="max-w-6xl mx-auto">
           {/* ウェルカムバナー */}
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-8 text-white mb-8 shadow-lg">
-            <div className="flex items-center justify-between">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-6 sm:p-8 text-white mb-8 shadow-lg">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-2xl font-bold">
+                <div className="flex flex-wrap items-center gap-3 mb-2">
+                  <h1 className="text-xl sm:text-2xl font-bold">
                     ようこそ、{user?.username}さん！
                   </h1>
                   {isAdmin ? (
@@ -148,7 +152,7 @@ export default function ShelterDashboardPage() {
                     <span className="bg-blue-400 text-blue-900 text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wide">スタッフ</span>
                   )}
                 </div>
-                <p className="text-blue-100">
+                <p className="text-blue-100 text-sm sm:text-base">
                   保護団体ダッシュボードへようこそ。
                   {isAdmin 
                     ? "ここから猫の登録や申請の管理（管理者機能）ができます。" 
@@ -157,7 +161,7 @@ export default function ShelterDashboardPage() {
               </div>
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-white font-medium transition-colors"
+                className="w-full sm:w-auto px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-white font-medium transition-colors text-center"
               >
                 ログアウト
               </button>
@@ -284,7 +288,10 @@ export default function ShelterDashboardPage() {
                 <span className="text-2xl">🐱</span>
               </div>
               <div className="text-3xl font-bold text-gray-800">{stats.totalCats}</div>
-              <p className="text-sm text-green-500 mt-1">募集中: {stats.openCats}匹</p>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm">
+                <span className="text-green-500 font-medium">募集中: {stats.openCats}匹</span>
+                <span className="text-purple-500 font-medium">トライアル: {stats.trialCats}匹</span>
+              </div>
             </div>
 
             {isAdmin && (

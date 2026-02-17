@@ -29,12 +29,12 @@ class Shelter(models.Model):
     prefecture = models.CharField(
         max_length=50,
         verbose_name='都道府県',
-        default='東京都' # 移行用デフォルト
+        default='東京都'
     )
     city = models.CharField(
         max_length=100,
         verbose_name='市区町村',
-        default='〇〇区' # 移行用デフォルト
+        default='〇〇区'
     )
     address = models.TextField(
         verbose_name='店舗住所'
@@ -44,7 +44,6 @@ class Shelter(models.Model):
         blank=True,
         verbose_name='郵便番号'
     )
-    # Googleマップ連携用（将来的に緯度経度など）
     
     # 代表連絡先（必須・一部非公開）
     email = models.EmailField(
@@ -73,34 +72,84 @@ class Shelter(models.Model):
     # 営業情報
     business_hours = models.TextField(
         blank=True,
-        verbose_name='営業日・営業時間・定休日',
-        help_text='例: 平日11:00-20:00, 土日祝10:00-19:00, 定休日: 水曜'
+        verbose_name='営業日・営業時間・定休日'
     )
     transfer_available_hours = models.TextField(
         blank=True,
-        verbose_name='譲渡対応可能な時間帯',
-        help_text='例: 平日14:00-16:00'
+        verbose_name='譲渡対応可能な時間帯'
     )
     
-    # 既存フィールド（後方互換または削除対象）
+    # 既存フィールド
     representative = models.CharField(
         max_length=100,
         verbose_name='代表者名',
-        blank=True # 必須解除
+        blank=True
     )
     registration_number = models.CharField(
         max_length=100,
         blank=True,
         verbose_name='動物取扱業登録番号'
     )
-    description = models.TextField(
-        blank=True,
-        verbose_name='団体説明'
+
+    # --- B. 一般公開プロフィール設定（新規追加） ---
+    
+    public_profile_enabled = models.BooleanField(
+        default=False,
+        verbose_name='プロフィール一般公開',
+        help_text='承認済みの団体のみ公開可能です'
     )
     
-    # --- ③ サービス（運営）が持つべき情報・仕組み ---
+    logo_image = models.ImageField(
+        upload_to='shelters/logos/',
+        blank=True,
+        null=True,
+        verbose_name='団体ロゴアイコン'
+    )
     
-    # 団体審査ステータス
+    header_image = models.ImageField(
+        upload_to='shelters/headers/',
+        blank=True,
+        null=True,
+        verbose_name='ヘッダー画像'
+    )
+    
+    description = models.TextField(
+        blank=True,
+        verbose_name='団体紹介文',
+        help_text='活動方針、譲渡の流れ、カフェの雰囲気など'
+    )
+    
+    # 一般からの保護受付
+    rescue_accepting = models.BooleanField(
+        default=False,
+        verbose_name='一般からの保護受付'
+    )
+    rescue_area_text = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name='保護受付地域'
+    )
+    rescue_notes = models.TextField(
+        blank=True,
+        verbose_name='保護受付に関する注意事項'
+    )
+    
+    # 支援募集
+    support_goods_url = models.URLField(
+        blank=True,
+        verbose_name='物資支援リンク'
+    )
+    support_donation_url = models.URLField(
+        blank=True,
+        verbose_name='寄付・支援金リンク'
+    )
+    support_message = models.TextField(
+        blank=True,
+        verbose_name='支援のお願いメッセージ'
+    )
+
+    # --- C. 運営管理項目 ---
+    
     VERIFICATION_STATUS_CHOICES = [
         ('pending', '審査中'),
         ('approved', '承認済み'),
@@ -114,21 +163,15 @@ class Shelter(models.Model):
         default='pending',
         verbose_name='審査ステータス'
     )
-
     review_message = models.TextField(
         blank=True,
-        verbose_name='審査メッセージ',
-        help_text='承認・差し戻し・お見送りの際の理由や連絡事項'
+        verbose_name='審査メッセージ'
     )
-    
     contact_verified = models.BooleanField(
         default=False,
         verbose_name='連絡先確認済み'
     )
-    
-    # ログ・履歴は別モデルまたは管理ログで管理するが、簡易的にここに持つならJsonField等
-    # 一旦モデル定義としてはここまで
-    
+
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='登録日時'

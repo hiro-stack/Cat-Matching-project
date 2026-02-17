@@ -20,7 +20,11 @@ class CatVideoInline(admin.TabularInline):
 @admin.register(Cat)
 class CatAdmin(admin.ModelAdmin):
     list_display = ['name', 'gender', 'age_category', 'estimated_age', 'spay_neuter_status', 'vaccination_status', 'shelter', 'status']
-    list_filter = ['gender', 'status', 'age_category', 'spay_neuter_status', 'vaccination_status', 'size', 'human_distance']
+    list_filter = (
+        'status', 'gender', 'age_category', 
+        'shelter', 'is_public',
+        'affection_level', 'maintenance_level'
+    )
     search_fields = ['name', 'breed', 'color', 'shelter__name']
     inlines = [CatImageInline, CatVideoInline]  # 画像と動画を統合
     readonly_fields = ['created_at', 'updated_at']

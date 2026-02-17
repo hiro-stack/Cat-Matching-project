@@ -231,7 +231,8 @@ class Command(BaseCommand):
                     health_status_category='healthy',
 
                     # Personality
-                    human_distance=random.choice(['cuddly', 'ok', 'shy']),
+                    affection_level=random.randint(1, 5),
+                    maintenance_level=random.choice(['easy', 'normal', 'hard']),
                     activity_level=random.choice(['active', 'normal', 'calm']),
                     personality=f'{name}はとても可愛い猫です。',
 
@@ -240,6 +241,9 @@ class Command(BaseCommand):
                     trial_period='2週間',
                     transfer_fee=random.choice([0, 10000, 15000, 20000]),
                     fee_details='ワクチン接種費用として',
+                    is_single_ok=random.choice([True, False]),
+                    is_elderly_ok=random.choice([True, False]),
+                    other_terms='ペット可物件必須、脱走防止対策必須、ご家族全員の同意など',
 
                     description=f'{name}は{shelter.name}で保護された猫です。新しい家族を探しています。',
                     status='open',

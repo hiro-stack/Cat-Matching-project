@@ -3,12 +3,15 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import Cookies from "js-cookie";
 import api from "@/lib/api";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
-import { Image as ImageIcon, Plus, X } from "lucide-react";
+import { Image as ImageIcon, Plus, X, Lock } from "lucide-react";
 import { compressImage } from "@/utils/image";
+import { toast } from "react-hot-toast";
+import { Button } from "@/components/ui/Button";
 
 interface CatFormData {
   name: string;
@@ -27,11 +30,15 @@ interface CatFormData {
   health_notes: string;
   
   // Personality
-  human_distance: string;
+  affection_level: number;
+  maintenance_level: string;
   activity_level: string;
   personality: string;
   
   // Transfer
+  is_single_ok: boolean;
+  is_elderly_ok: boolean;
+  other_terms: string;
   interview_format: string;
   trial_period: string;
   transfer_fee: number;
@@ -57,10 +64,14 @@ const initialFormData: CatFormData = {
   fiv_felv_status: "unknown",
   health_notes: "",
   
-  human_distance: "unknown",
+  affection_level: 3,
+  maintenance_level: "normal",
   activity_level: "unknown",
   personality: "",
   
+  is_single_ok: false,
+  is_elderly_ok: false,
+  other_terms: "",
   interview_format: "offline",
   trial_period: "",
   transfer_fee: 0,
@@ -78,6 +89,7 @@ export default function NewCatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [isSuperUser, setIsSuperUser] = useState(false);
 
   // 画像アップロード用State
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -99,6 +111,10 @@ export default function NewCatPage() {
           return;
         }
         setUser(response.data);
+        
+        // 管理者権限の判定
+        const isActuallyAdmin = response.data.is_superuser || response.data.shelter_role === 'admin';
+        setIsSuperUser(isActuallyAdmin);
       } catch (error) {
         router.push("/shelter/login");
         return;
@@ -158,7 +174,9 @@ export default function NewCatPage() {
     e.preventDefault();
     setIsLoading(true);
     setErrors({});
-
+    
+    // API処理中のローディング表示はButtonのisLoadingで行う
+    
     try {
       // 1. 猫情報の作成
       const response = await api.post("/api/cats/", formData);
@@ -180,7 +198,7 @@ export default function NewCatPage() {
             },
           });
           // 画像アップロード成功
-          alert("猫の登録と画像のアップロードが完了しました！");
+          toast.success("猫の登録と画像のアップロードが完了しました！");
           router.push(`/shelter/cats/`);
         } catch (imageErr: any) {
           console.error("Image upload failed:", imageErr);
@@ -207,12 +225,12 @@ export default function NewCatPage() {
              errorMsg = imageErr.message;
           }
 
-          alert(`猫の登録は完了しましたが、画像のアップロードに失敗しました。\nエラー: ${errorMsg}\n\n編集ページから画像を追加してください。`);
+          toast.error(`猫の登録は完了しましたが、画像のアップロードに失敗しました。\nエラー: ${errorMsg}`, { duration: 6000 });
           router.push(`/shelter/cats/${catId}/edit?created=true`);
         }
       } else {
         // 画像なしで登録完了
-        alert("猫の登録が完了しました！");
+        toast.success("猫の登録が完了しました！");
         router.push(`/shelter/cats/`);
       }
     } catch (err: any) {
@@ -307,10 +325,12 @@ export default function NewCatPage() {
                 
                 {previewUrl ? (
                   <div className="relative w-40 h-40 rounded-full overflow-hidden border-4 border-white shadow-lg group">
-                    <img 
+                    <Image 
                       src={previewUrl} 
                       alt="Preview" 
-                      className="w-full h-full object-cover"
+                      fill
+                      unoptimized
+                      className="object-cover"
                     />
                     <button
                       type="button"
@@ -470,25 +490,46 @@ export default function NewCatPage() {
                 </h2>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                     {/* 人への距離感 */}
+                     {/* 甘えん坊度 */}
                     <div>
-                        <label htmlFor="human_distance" className="block text-sm font-medium text-gray-700 mb-1.5">
-                        人への距離感
+                        <label htmlFor="affection_level" className="block text-sm font-medium text-gray-700 mb-1.5">
+                        甘えん坊度
                         </label>
                         <select
-                        id="human_distance"
-                        name="human_distance"
-                        value={formData.human_distance}
-                        onChange={handleChange}
+                        id="affection_level"
+                        name="affection_level"
+                        value={formData.affection_level}
+                        onChange={(e) => setFormData(prev => ({ ...prev, affection_level: parseInt(e.target.value) }))}
                         className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none"
                         >
-                            <option value="cuddly">抱っこ好き</option>
-                            <option value="ok">抱っこ可</option>
-                            <option value="shy">抱っこ苦手</option>
-                            <option value="unknown">不明</option>
+                            <option value="5">5: とろとろ甘えん坊（膝乗り・抱っこ大好き）</option>
+                            <option value="4">4: 甘えん坊（ナデナデ大好き）</option>
+                            <option value="3">3: ツンデレ・気まぐれ（気が向くと甘える）</option>
+                            <option value="2">2: クール・マイペース（適度な距離感）</option>
+                            <option value="1">1: 怖がり・修行中（ゆっくり仲良くなろう）</option>
                         </select>
                     </div>
 
+                     {/* お手入れ難易度 */}
+                    <div>
+                        <label htmlFor="maintenance_level" className="block text-sm font-medium text-gray-700 mb-1.5">
+                        お手入れ難易度（爪切り・投薬等）
+                        </label>
+                        <select
+                        id="maintenance_level"
+                        name="maintenance_level"
+                        value={formData.maintenance_level}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none"
+                        >
+                             <option value="easy">初心者でも安心（協力的）</option>
+                             <option value="normal">少しコツが必要（普通）</option>
+                             <option value="hard">経験者向き（要練習）</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                      {/* 活動量 */}
                     <div>
                         <label htmlFor="activity_level" className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -621,9 +662,18 @@ export default function NewCatPage() {
 
               {/* D. 募集詳細・譲渡条件 */}
               <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
-                <h2 className="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex items-center gap-2">
-                    <span className="text-xl">🤝</span> 募集詳細・譲渡条件
-                </h2>
+                <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-200">
+                    <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <span className="text-xl">🤝</span> 募集詳細・譲渡条件
+                        {!isSuperUser && <Lock className="w-4 h-4 text-amber-500" />}
+                    </h2>
+                    {!isSuperUser && (
+                        <div className="px-3 py-1 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-full border border-amber-100 flex items-center gap-1">
+                            <Lock className="w-3 h-3" />
+                            管理者のみ設定可
+                        </div>
+                    )}
+                </div>
 
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                      {/* 面談形式 */}
@@ -631,44 +681,121 @@ export default function NewCatPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">
                             面談形式
                         </label>
-                        <select
-                            name="interview_format"
-                            value={formData.interview_format}
-                            onChange={handleChange}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none"
-                        >
-                             <option value="offline">対面のみ</option>
-                             <option value="online">オンラインのみ</option>
-                             <option value="both">対面・オンライン可</option>
-                        </select>
+                        <div className="relative">
+                            <select
+                                name="interview_format"
+                                value={formData.interview_format}
+                                onChange={handleChange}
+                                disabled={!isSuperUser}
+                                className={`w-full px-4 py-3 rounded-xl border border-gray-200 outline-none transition-all ${!isSuperUser ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-100 pl-10' : ''}`}
+                            >
+                                 <option value="offline">対面のみ</option>
+                                 <option value="online">オンラインのみ</option>
+                                 <option value="both">対面・オンライン可</option>
+                            </select>
+                            {!isSuperUser && (
+                                <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                            )}
+                        </div>
                     </div>
                      {/* トライアル期間 */}
                     <div>
                          <label className="block text-sm font-medium text-gray-700 mb-1.5">
                             トライアル期間
                         </label>
-                        <input
-                            type="text"
-                            name="trial_period"
-                            value={formData.trial_period}
-                            onChange={handleChange}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none"
-                            placeholder="例：2週間"
-                        />
+                        <div className="relative">
+                            <input
+                                type="text"
+                                name="trial_period"
+                                value={formData.trial_period}
+                                onChange={handleChange}
+                                disabled={!isSuperUser}
+                                className={`w-full px-4 py-3 rounded-xl border border-gray-200 outline-none transition-all ${!isSuperUser ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-100 pl-10' : ''}`}
+                                placeholder="例：2週間"
+                            />
+                            {!isSuperUser && (
+                                <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                            )}
+                        </div>
+                    </div>
+
+                    {/* 譲渡条件フラグ */}
+                    <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                        <label className={`flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl transition-all ${!isSuperUser ? 'bg-gray-50 cursor-not-allowed border-gray-100' : 'cursor-pointer hover:bg-gray-50'}`}>
+                            <input
+                                type="checkbox"
+                                name="is_single_ok"
+                                checked={formData.is_single_ok}
+                                onChange={handleChange}
+                                disabled={!isSuperUser}
+                                className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+                            />
+                            <div>
+                                <span className={`block text-sm font-bold ${!isSuperUser ? 'text-gray-400' : 'text-gray-800'}`}>単身者応募可</span>
+                                <span className="block text-xs text-gray-400">一人暮らしの方でも応募可能です</span>
+                            </div>
+                            {!isSuperUser && <Lock className="w-3.5 h-3.5 text-gray-300 ml-auto" />}
+                        </label>
+
+                        <label className={`flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl transition-all ${!isSuperUser ? 'bg-gray-50 cursor-not-allowed border-gray-100' : 'cursor-pointer hover:bg-gray-50'}`}>
+                            <input
+                                type="checkbox"
+                                name="is_elderly_ok"
+                                checked={formData.is_elderly_ok}
+                                onChange={handleChange}
+                                disabled={!isSuperUser}
+                                className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+                            />
+                            <div>
+                                <span className={`block text-sm font-bold ${!isSuperUser ? 'text-gray-400' : 'text-gray-800'}`}>高齢者応募可</span>
+                                <span className="block text-xs text-gray-400">60歳以上の方でも応募可能です</span>
+                            </div>
+                            {!isSuperUser && <Lock className="w-3.5 h-3.5 text-gray-300 ml-auto" />}
+                        </label>
+                    </div>
+
+                    {/* その他譲渡条件 */}
+                    <div className="md:col-span-2">
+                         <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-2">
+                            その他譲渡条件
+                            {!isSuperUser && <Lock className="w-3.5 h-3.5 text-gray-300" />}
+                        </label>
+                        <div className="relative">
+                            <textarea
+                                name="other_terms"
+                                value={formData.other_terms}
+                                onChange={handleChange}
+                                rows={3}
+                                disabled={!isSuperUser}
+                                className={`w-full px-4 py-3 rounded-xl border border-gray-200 outline-none resize-none transition-all ${!isSuperUser ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-100 pl-10' : ''}`}
+                                placeholder="例：ペット可物件必須、脱走防止対策必須など"
+                            />
+                            {!isSuperUser && (
+                                <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-4" />
+                            )}
+                        </div>
+                        <p className="mt-1 text-xs text-gray-400">※詳細な条件を記載することで、ミスマッチを減らせます</p>
                     </div>
                      {/* 譲渡費用 */}
                      <div>
-                         <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                         <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-2">
                             譲渡費用 (円) <span className="text-red-400">*</span>
+                            {!isSuperUser && <Lock className="w-3.5 h-3.5 text-gray-300" />}
                         </label>
-                        <input
-                            type="number"
-                            name="transfer_fee"
-                            value={formData.transfer_fee}
-                            onChange={handleChange}
-                            min="0"
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none"
-                        />
+                        <div className="relative">
+                            <input
+                                type="number"
+                                name="transfer_fee"
+                                value={formData.transfer_fee}
+                                onChange={handleChange}
+                                min="0"
+                                disabled={!isSuperUser}
+                                className={`w-full px-4 py-3 rounded-xl border border-gray-200 outline-none transition-all ${!isSuperUser ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-100 pl-10' : ''}`}
+                            />
+                            {!isSuperUser && (
+                                <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                            )}
+                        </div>
                     </div>
                 </div>
                 {/* 費用詳細 */}
@@ -688,19 +815,26 @@ export default function NewCatPage() {
 
                 {/* 紹介文 */}
                  <div>
-                    <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-2">
                       全体の紹介文 <span className="text-red-400">*</span>
+                      {!isSuperUser && <Lock className="w-3.5 h-3.5 text-amber-500" />}
                     </label>
-                    <textarea
-                      id="description"
-                      name="description"
-                      value={formData.description}
-                      onChange={handleChange}
-                      required
-                      rows={5}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none resize-none"
-                      placeholder="保護の経緯、これまでのストーリー、未来の家族へのメッセージなど..."
-                    />
+                    <div className="relative">
+                        <textarea
+                          id="description"
+                          name="description"
+                          value={formData.description}
+                          onChange={handleChange}
+                          required
+                          rows={4}
+                          disabled={!isSuperUser}
+                          className={`w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none resize-none transition-all ${!isSuperUser ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-100 pl-10' : ''}`}
+                          placeholder="保護の経緯、エピソードなど..."
+                        />
+                        {!isSuperUser && (
+                            <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-4" />
+                        )}
+                    </div>
                   </div>
               </div>
               
@@ -710,12 +844,13 @@ export default function NewCatPage() {
                   <div className="flex-1 pr-4">
                     <h2 className="text-lg font-bold text-gray-800 mb-1 flex items-center gap-2">
                       <span className="text-xl">🌐</span> 公開設定
+                      {!isSuperUser && <Lock className="w-4 h-4 text-amber-500" />}
                     </h2>
                     <p className="text-sm text-gray-500 mb-3">
                       一般ユーザーにこの猫の情報を公開しますか？
                     </p>
                     
-                    {user?.shelter_info?.verification_status !== 'approved' && (
+                    {user?.shelter_info?.verification_status !== 'approved' ? (
                       <div className="p-3 bg-orange-50 rounded-xl border border-orange-100 flex items-start gap-2 mb-4">
                         <span className="text-orange-500 text-lg">⚠️</span>
                         <p className="text-xs text-orange-800 leading-relaxed font-medium">
@@ -723,17 +858,24 @@ export default function NewCatPage() {
                           運営による承認が完了するまで、「公開」に設定することはできません。
                         </p>
                       </div>
+                    ) : !isSuperUser && (
+                      <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 flex items-start gap-2 mb-4">
+                        <Lock className="w-4 h-4 text-amber-500 mt-0.5" />
+                        <p className="text-xs text-amber-800 leading-relaxed font-medium">
+                          公開設定の変更は、管理者権限が必要です。
+                        </p>
+                      </div>
                     )}
                   </div>
                   
-                  <label className="relative inline-flex items-center cursor-pointer">
+                  <label className={`relative inline-flex items-center ${!isSuperUser || user?.shelter_info?.verification_status !== 'approved' ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
                     <input
                       type="checkbox"
                       id="is_public"
                       name="is_public"
                       checked={formData.is_public}
                       onChange={handleChange}
-                      disabled={user?.shelter_info?.verification_status !== 'approved'}
+                      disabled={!isSuperUser || user?.shelter_info?.verification_status !== 'approved'}
                       className="sr-only peer"
                     />
                     <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
@@ -742,20 +884,26 @@ export default function NewCatPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-50">
                   <div>
-                    <label htmlFor="status" className="block text-xs font-bold text-gray-400 uppercase mb-2">現在の募集ステータス</label>
-                    <select
-                      id="status"
-                      name="status"
-                      value={formData.status}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none text-sm font-medium"
-                    >
-                      <option value="open">募集中</option>
-                      <option value="paused">一時停止</option>
-                      <option value="in_review">審査中</option>
-                      <option value="trial">トライアル中</option>
-                      <option value="adopted">譲渡済み</option>
-                    </select>
+                    <label htmlFor="status" className="block text-xs font-bold text-gray-400 uppercase mb-2">初期ステータス</label>
+                    <div className="relative">
+                        <select
+                          id="status"
+                          name="status"
+                          value={formData.status}
+                          onChange={handleChange}
+                          disabled={!isSuperUser}
+                          className={`w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none text-sm font-medium transition-all ${!isSuperUser ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-100 pl-10' : ''}`}
+                        >
+                          <option value="open">募集中</option>
+                          <option value="paused">一時停止</option>
+                          <option value="in_review">審査中</option>
+                          <option value="trial">トライアル中</option>
+                          <option value="adopted">譲渡済み</option>
+                        </select>
+                        {!isSuperUser && (
+                            <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -768,13 +916,14 @@ export default function NewCatPage() {
                 >
                   キャンセル
                 </Link>
-                <button
+                <Button
                   type="submit"
-                  disabled={isLoading}
-                  className="flex-1 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-500 text-white font-semibold rounded-xl shadow-md hover:shadow-lg hover:from-blue-700 hover:to-indigo-600 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                  isLoading={isLoading}
+                  disabled={isLoading || user?.shelter_info?.verification_status !== 'approved' && formData.is_public}
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-500 hover:from-blue-700 hover:to-indigo-600 shadow-md text-white font-semibold rounded-xl"
                 >
                   {isLoading ? "登録中..." : "猫を登録"}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

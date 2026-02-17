@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, MapPin, Phone, Mail, Play, Image as ImageIcon, ExternalLink, Calendar, Clock, Heart, Activity, Stethoscope } from "lucide-react";
+import { ArrowLeft, MapPin, Phone, Mail, Play, Image as ImageIcon, ExternalLink, Calendar, Clock, Heart, Activity, Stethoscope, Twitter } from "lucide-react";
 import { catsService } from "@/services/cats";
 import { CatDetail, CatImage, CatVideo } from "@/types";
 import { ImageWithFallback } from "@/components/common/ImageWithFallback";
@@ -55,11 +55,18 @@ const FIV_FELV_LABELS: Record<string, string> = {
   unknown: "不明",
 };
 
-const HUMAN_DISTANCE_LABELS: Record<string, string> = {
-  cuddly: "抱っこ好き",
-  ok: "抱っこ可",
-  shy: "抱っこ苦手",
-  unknown: "不明",
+const AFFECTION_LEVEL_LABELS: Record<number, string> = {
+  5: "5: とろとろ甘えん坊",
+  4: "4: 甘えん坊",
+  3: "3: ツンデレ",
+  2: "2: クール",
+  1: "1: 怖がり",
+};
+
+const MAINTENANCE_LEVEL_LABELS: Record<string, string> = {
+    easy: "初心者でも安心 (お手入れ楽々)",
+    normal: "少しコツが必要 (普通)",
+    hard: "経験者向き (練習中)",
 };
 
 const ACTIVITY_LEVEL_LABELS: Record<string, string> = {
@@ -369,58 +376,66 @@ export default function CatDetailPage() {
             )}
             
             {/* カフェの基本情報 (スマホ版で上部に持ってくるデザインもアリだが、一旦ここに配置) */}
-            <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100">
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                  <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
                    <span className="text-xl">🏠</span> お問い合わせ・譲渡元
                  </h2>
-                 <div className="space-y-4">
-                     <div>
-                        <p className="font-bold text-lg text-pink-600">{cat.shelter.name}</p>
-                        <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
-                            {cat.shelter.prefecture && <span className="bg-gray-100 px-2 py-0.5 rounded text-xs">{cat.shelter.prefecture}</span>}
-                            <span>{cat.shelter.city}</span>
-                        </div>
-                     </div>
-                     
-                     <div className="text-sm text-gray-600 space-y-2">
-                        {cat.shelter.address && (
-                            <div className="flex items-start gap-2">
-                                <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                                <span>{cat.shelter.address}</span>
+                 <div className="space-y-6">
+                      <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                         <div className="flex-1">
+                            <Link href={`/shelters/${cat.shelter.id}`} className="group inline-block">
+                                <p className="font-bold text-xl text-pink-600 group-hover:text-pink-700 transition-colors flex items-center gap-1">
+                                    {cat.shelter.name}
+                                    <ExternalLink className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </p>
+                            </Link>
+                            <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
+                                {cat.shelter.prefecture && <span className="bg-gray-100 px-2 py-0.5 rounded text-xs">{cat.shelter.prefecture}</span>}
+                                <span>{cat.shelter.city}</span>
                             </div>
-                        )}
-                        {cat.shelter.business_hours && (
-                            <div className="flex items-start gap-2">
-                                <Clock className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                                <div>
-                                    <span className="font-medium text-gray-700 block mb-0.5">営業時間</span>
-                                    <span className="whitespace-pre-wrap">{cat.shelter.business_hours}</span>
-                                </div>
-                            </div>
-                        )}
-                        {cat.shelter.transfer_available_hours && (
-                            <div className="flex items-start gap-2">
-                                <Calendar className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                                <div>
-                                    <span className="font-medium text-gray-700 block mb-0.5">譲渡対応時間</span>
-                                    <span className="whitespace-pre-wrap">{cat.shelter.transfer_available_hours}</span>
-                                </div>
-                            </div>
-                        )}
-                     </div>
+                         </div>
+                         <Link 
+                            href={`/shelters/${cat.shelter.id}`}
+                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-50 text-blue-600 text-sm font-bold rounded-xl hover:bg-blue-100 transition-all border border-blue-100"
+                         >
+                           団体プロフィールを表示 <span className="text-lg">›</span>
+                         </Link>
+                      </div>
+                      
+                      <div className="text-sm text-gray-600 space-y-3 pt-2 border-t border-gray-50">
+                         {cat.shelter.address && (
+                             <div className="flex items-start gap-3">
+                                 <div className="p-1.5 bg-gray-50 rounded-lg text-gray-400">
+                                    <MapPin className="w-4 h-4" />
+                                 </div>
+                                 <span className="leading-relaxed">{cat.shelter.address}</span>
+                             </div>
+                         )}
+                         {cat.shelter.business_hours && (
+                             <div className="flex items-start gap-3">
+                                 <div className="p-1.5 bg-gray-50 rounded-lg text-gray-400">
+                                    <Clock className="w-4 h-4" />
+                                 </div>
+                                 <div className="flex-1">
+                                     <span className="font-bold text-gray-700 block text-xs mb-0.5">営業時間・定休日</span>
+                                     <span className="whitespace-pre-wrap leading-relaxed">{cat.shelter.business_hours}</span>
+                                 </div>
+                             </div>
+                         )}
+                      </div>
 
-                     <div className="grid grid-cols-2 gap-2 mt-4">
-                        {cat.shelter.website_url && (
-                             <a href={cat.shelter.website_url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-50 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-100 transition-colors">
-                                 <ExternalLink className="w-4 h-4" /> 公式サイト
-                             </a>
-                        )}
-                        {cat.shelter.sns_url && (
-                             <a href={cat.shelter.sns_url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 px-4 py-2 bg-pink-50 text-pink-600 text-sm font-medium rounded-lg hover:bg-pink-100 transition-colors">
-                                 <ExternalLink className="w-4 h-4" /> SNSを見る
-                             </a>
-                        )}
-                     </div>
+                      <div className="grid grid-cols-2 gap-3 mt-4">
+                         {cat.shelter.website_url && (
+                              <a href={cat.shelter.website_url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition-all shadow-sm">
+                                  <ExternalLink className="w-4 h-4" /> 公式サイト
+                              </a>
+                         )}
+                         {cat.shelter.sns_url && (
+                              <a href={cat.shelter.sns_url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-200 text-gray-700 text-xs font-bold rounded-xl hover:bg-gray-50 transition-all shadow-sm">
+                                  <Twitter className="w-4 h-4 text-blue-400" /> SNSを見る
+                              </a>
+                         )}
+                      </div>
                  </div>
             </div>
             
@@ -487,10 +502,13 @@ export default function CatDetailPage() {
                 </h2>
                 
                 <div className="flex flex-wrap gap-2 mb-4">
-                     <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
-                         {HUMAN_DISTANCE_LABELS[cat.human_distance]}
+                     <span className="px-3 py-1 bg-pink-50 text-pink-700 rounded-full text-sm font-medium border border-pink-100">
+                         甘えん坊度: {AFFECTION_LEVEL_LABELS[cat.affection_level as keyof typeof AFFECTION_LEVEL_LABELS]}
                      </span>
-                      <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm font-medium">
+                      <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium border border-blue-100">
+                         お手入れ: {MAINTENANCE_LEVEL_LABELS[cat.maintenance_level as keyof typeof MAINTENANCE_LEVEL_LABELS]}
+                     </span>
+                      <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm font-medium border border-green-100">
                          活動量: {ACTIVITY_LEVEL_LABELS[cat.activity_level]}
                      </span>
                 </div>
@@ -554,11 +572,22 @@ export default function CatDetailPage() {
             </div>
             
             {/* 譲渡条件 */}
-             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                 <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
                     <span className="text-xl">🤝</span> 譲渡条件
                 </h2>
                 <div className="space-y-4">
+                     <div className="grid grid-cols-2 gap-2 mb-4">
+                        <div className={`p-3 rounded-xl border text-center ${cat.is_single_ok ? 'bg-blue-50 border-blue-100 text-blue-700' : 'bg-gray-50 border-gray-100 text-gray-400'}`}>
+                            <p className="text-[10px] uppercase font-bold mb-1">単身者応募</p>
+                            <p className="font-bold">{cat.is_single_ok ? '可' : '要相談/不可'}</p>
+                        </div>
+                        <div className={`p-3 rounded-xl border text-center ${cat.is_elderly_ok ? 'bg-blue-50 border-blue-100 text-blue-700' : 'bg-gray-50 border-gray-100 text-gray-400'}`}>
+                            <p className="text-[10px] uppercase font-bold mb-1">高齢者応募</p>
+                            <p className="font-bold">{cat.is_elderly_ok ? '可' : '要相談/不可'}</p>
+                        </div>
+                     </div>
+
                      <div className="flex justify-between items-center py-2 border-b border-gray-50">
                          <span className="text-gray-500">面談形式</span>
                          <span className="font-medium">{INTERVIEW_FORMAT_LABELS[cat.interview_format]}</span>
@@ -571,6 +600,14 @@ export default function CatDetailPage() {
                          <span className="text-gray-500">譲渡費用</span>
                          <span className="font-bold text-lg text-pink-600">¥{cat.transfer_fee.toLocaleString()}</span>
                      </div>
+                     
+                     {cat.other_terms && (
+                        <div className="bg-amber-50/50 p-4 rounded-xl border border-amber-100">
+                            <h3 className="text-amber-800 text-xs font-bold mb-1">⚠️ 譲渡に関する特記事項</h3>
+                            <p className="text-amber-900 text-sm whitespace-pre-wrap">{cat.other_terms}</p>
+                        </div>
+                     )}
+
                      {cat.fee_details && (
                          <div className="text-xs text-gray-500 mt-2 bg-gray-50 p-3 rounded-lg">
                              <span className="font-bold">費用に含まれるもの:</span> {cat.fee_details}

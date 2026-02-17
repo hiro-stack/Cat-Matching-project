@@ -2,7 +2,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Shelter, ShelterUser
-from .serializers import ShelterSerializer, ShelterMemberSerializer
+from .serializers import ShelterSerializer, ShelterPublicSerializer, ShelterMemberSerializer
 
 class ShelterViewSet(viewsets.ModelViewSet):
     """保護団体情報管理 ViewSet"""
@@ -143,6 +143,22 @@ class ShelterViewSet(viewsets.ModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         """管理者（admin）のみ更新可能"""
         return self.update(request, *args, **kwargs)
+
+
+class PublicShelterViewSet(viewsets.ReadOnlyModelViewSet):
+    """一般ユーザー向けの団体情報 ViewSet"""
+    queryset = Shelter.objects.filter(public_profile_enabled=True, verification_status='approved')
+    serializer_class = ShelterPublicSerializer
+    permission_classes = [permissions.AllowAny]
+    lookup_field = 'id'
+
+    def get_object(self):
+        """公開フラグが立っており、かつ審査承認済みの団体のみ返す"""
+        obj = super().get_object()
+        if not obj.public_profile_enabled or obj.verification_status != 'approved':
+            from django.http import Http404
+            raise Http404("この団体情報は公開されていないか、審査中です。")
+        return obj
 
 
 class ShelterMemberViewSet(viewsets.ModelViewSet):

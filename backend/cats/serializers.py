@@ -113,10 +113,11 @@ class CatDetailSerializer(serializers.ModelSerializer):
             'fiv_felv_status', 'health_notes',
 
             # 性格
-            'human_distance', 'activity_level', 'personality',
+            'affection_level', 'maintenance_level', 'activity_level', 'personality',
 
             # 譲渡条件
             'interview_format', 'trial_period', 'transfer_fee', 'fee_details',
+            'is_single_ok', 'is_elderly_ok', 'other_terms',
 
             'description', 'status', 'is_public',
             'images', 'videos', 'primary_image', 'shelter', 'shelter_name',
@@ -152,10 +153,109 @@ class CatCreateUpdateSerializer(serializers.ModelSerializer):
             'breed', 'size', 'color', 
             'spay_neuter_status', 'vaccination_status', 'health_status_category', 
             'fiv_felv_status', 'health_notes',
-            'human_distance', 'activity_level', 'personality',
+            'affection_level', 'maintenance_level', 'activity_level', 'personality',
             'interview_format', 'trial_period', 'transfer_fee', 'fee_details',
+            'is_single_ok', 'is_elderly_ok', 'other_terms',
             'description', 'status', 'is_public'
         ]
+
+    def validate(self, data):
+        """スタッフ権限による不正なフィールド更新・作成を防止"""
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return data
+
+        from shelters.models import ShelterUser
+        
+        # 団体IDの特定 (更新時はinstanceから、作成時はdataのshelterから、あるいはリクエストユーザーから)
+        shelter = None
+        if self.instance:
+            shelter = self.instance.shelter
+        elif 'shelter' in data:
+            shelter = data['shelter']
+        
+        # 団体が特定できない場合は、ユーザーが所属する有効な団体を取得
+        if not shelter:
+            shelter_user_obj = ShelterUser.objects.filter(user=request.user, is_active=True).first()
+            if shelter_user_obj:
+                shelter = shelter_user_obj.shelter
+
+        if not shelter:
+            return data
+
+        shelter_user = ShelterUser.objects.filter(
+            user=request.user,
+            shelter=shelter,
+            is_active=True
+        ).first()
+
+        # スタッフ権限の場合の制限
+        if shelter_user and shelter_user.role == 'staff':
+            # 管理者のみが「作成・更新」両方で制限されるフィールド
+            # 性格・特徴関連以外で、特に重要なもの
+            strict_restricted_fields = [
+                'status', 'is_public', 
+                'interview_format', 'trial_period', 'transfer_fee', 'fee_details',
+                'description', 'is_single_ok', 'is_elderly_ok', 'other_terms'
+            ]
+            
+            # 「更新時のみ」制限されるフィールド
+            update_only_restricted_fields = [
+                'name', 'gender', 'age_category', 'estimated_age', 'breed', 'size', 'color',
+                'spay_neuter_status', 'vaccination_status', 'health_status_category', 
+                'fiv_felv_status', 'health_notes'
+            ]
+
+            changed_restricted_fields = []
+
+            # 1. 厳格な制限フィールドのチェック (作成・更新共通)
+            for field in strict_restricted_fields:
+                if field in data:
+                    new_val = data[field]
+                    if self.instance:
+                        current_val = getattr(self.instance, field)
+                        if str(current_val) != str(new_val):
+                            changed_restricted_fields.append(field)
+                    else:
+                        # 新規作成時、モデルのデフォルト値以外を設定しようとしたらNG
+                        # 各フィールドの期待されるデフォルト値を定義
+                        field_defaults = {
+                            'is_public': False,
+                            'status': 'open',
+                            'interview_format': 'offline',
+                            'trial_period': '',
+                            'transfer_fee': 0,
+                            'fee_details': '',
+                            'description': '', # フロントエンドでスタッフに制限したため
+                            'is_single_ok': False,
+                            'is_elderly_ok': False,
+                            'other_terms': ''
+                        }
+                        
+                        if field in field_defaults:
+                            if new_val != field_defaults[field]:
+                                changed_restricted_fields.append(field)
+                        elif new_val: 
+                            # 定義外の制限フィールドに値が入っている場合
+                            changed_restricted_fields.append(field)
+
+            # 2. 更新時のみの制限チェック
+            if self.instance:
+                for field in update_only_restricted_fields:
+                    if field in data:
+                        current_val = getattr(self.instance, field)
+                        new_val = data[field]
+                        # 厳密な比較（str化で安全に比較）
+                        if str(current_val) != str(new_val):
+                            changed_restricted_fields.append(field)
+
+            if changed_restricted_fields:
+                raise ValidationError({
+                    field: "スタッフ権限ではこの項目を設定・変更できません。管理者に依頼してください。"
+                    for field in changed_restricted_fields
+                })
+
+        return data
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

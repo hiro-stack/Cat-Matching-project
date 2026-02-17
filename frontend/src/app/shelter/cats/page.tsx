@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import Cookies from "js-cookie";
 import api from "@/lib/api";
 import Header from "@/components/common/Header";
@@ -15,6 +16,7 @@ export default function ShelterCatsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isSuperUser, setIsSuperUser] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("all");
 
   useEffect(() => {
     const fetchMyCats = async () => {
@@ -105,6 +107,34 @@ export default function ShelterCatsPage() {
             )}
           </div>
 
+          {/* ステータスタブ */}
+          <div className="flex overflow-x-auto gap-2 mb-6 pb-2 no-scrollbar">
+            {[
+              { id: 'all', label: 'すべて', count: cats.length },
+              { id: 'open', label: '募集中', count: cats.filter(c => c.status === 'open').length },
+              { id: 'trial', label: 'トライアル', count: cats.filter(c => c.status === 'trial').length },
+              { id: 'adopted', label: '譲渡完了', count: cats.filter(c => c.status === 'adopted').length },
+              { id: 'etc', label: 'その他', count: cats.filter(c => !['open', 'trial', 'adopted'].includes(c.status)).length },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 ${
+                  activeTab === tab.id
+                    ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-100'
+                    : 'bg-white text-gray-500 border border-gray-100 hover:border-blue-200'
+                }`}
+              >
+                {tab.label}
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                  activeTab === tab.id ? 'bg-white/20' : 'bg-gray-100'
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+
           {/* エラー表示 */}
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl text-red-600">
@@ -112,73 +142,149 @@ export default function ShelterCatsPage() {
             </div>
           )}
 
-          {/* 猫一覧 */}
           {cats.length > 0 ? (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-100">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        猫
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        性別・年齢
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        ステータス
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        登録日
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {cats.map((cat) => (
-                      <tr 
-                        key={cat.id} 
-                        onClick={() => router.push(`/shelter/cats/${cat.id}/edit`)}
-                        className="hover:bg-blue-50 transition-colors cursor-pointer group"
-                      >
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0 group-hover:scale-105 transition-transform">
-                              {cat.primary_image ? (
-                                <img
-                                  src={cat.primary_image}
-                                  alt={cat.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-2xl">
-                                  🐱
-                                </div>
-                              )}
+            <>
+              {/* 猫リストのフィルタリング */}
+              {(() => {
+                const filteredCats = activeTab === 'all' 
+                  ? cats 
+                  : activeTab === 'etc'
+                    ? cats.filter(c => !['open', 'trial', 'adopted'].includes(c.status))
+                    : cats.filter(c => c.status === activeTab);
+                
+                if (filteredCats.length === 0) {
+                  return (
+                    <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
+                      <p className="text-gray-500">該当する猫がいません。</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <>
+                    {/* PC用テーブル表示 (md以上) */}
+                    <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-gray-50 border-b border-gray-100">
+                            <tr>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                猫情報
+                              </th>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                性別・年齢・種類
+                              </th>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                ステータス
+                              </th>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                登録日
+                              </th>
+                              <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                操作
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {filteredCats.map((cat) => (
+                              <tr 
+                                key={`pc-${cat.id}`} 
+                                onClick={() => router.push(`/shelter/cats/${cat.id}/edit`)}
+                                className="hover:bg-blue-50 transition-colors cursor-pointer group"
+                              >
+                                <td className="px-6 py-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0 group-hover:scale-105 transition-transform relative">
+                                      {cat.primary_image ? (
+                                        <Image
+                                          src={cat.primary_image}
+                                          alt={cat.name}
+                                          fill
+                                          className="object-cover"
+                                        />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-lg bg-gray-200">
+                                          🐱
+                                        </div>
+                                      )}
+                                    </div>
+                                    <p className="font-bold text-gray-800 group-hover:text-blue-600 transition-colors">{cat.name}</p>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <div className="text-sm">
+                                    <span className="font-medium text-gray-700">
+                                      {cat.gender === "male" ? "♂ オス" : cat.gender === "female" ? "♀ メス" : "不明"}
+                                    </span>
+                                    <span className="mx-2 text-gray-300">|</span>
+                                    <span className="text-gray-600">{cat.estimated_age || cat.age_category || "不明"}</span>
+                                    <div className="text-gray-500 text-xs mt-0.5">{cat.breed}</div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4">{getStatusBadge(cat.status)}</td>
+                                <td className="px-6 py-4 text-gray-500 text-sm">
+                                  {new Date(cat.created_at).toLocaleDateString("ja-JP")}
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <span className="text-gray-400 text-lg group-hover:text-blue-500">›</span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* モバイル用カード表示 (md未満) */}
+                    <div className="md:hidden space-y-4">
+                      {filteredCats.map((cat) => (
+                        <div 
+                          key={`mobile-${cat.id}`}
+                          onClick={() => router.push(`/shelter/cats/${cat.id}/edit`)}
+                          className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 active:scale-[0.98] transition-all flex gap-4 cursor-pointer"
+                        >
+                          <div className="w-20 h-20 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0 relative">
+                            {cat.primary_image ? (
+                              <Image
+                                src={cat.primary_image}
+                                alt={cat.name}
+                                fill
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-2xl bg-gray-200">
+                                🐱
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-start mb-1">
+                              <h3 className="font-bold text-gray-900 truncate pr-2">{cat.name}</h3>
+                              <div className="flex-shrink-0 transform scale-90 origin-top-right">
+                                {getStatusBadge(cat.status)}
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-medium text-gray-800 group-hover:text-blue-600 transition-colors">{cat.name}</p>
-                              <p className="text-sm text-gray-500">{cat.breed || "MIX"}</p>
+                            <div className="text-sm text-gray-600 mb-1">
+                              {cat.gender === "male" ? "♂" : cat.gender === "female" ? "♀" : "?"} 
+                              <span className="mx-1">·</span>
+                              {cat.estimated_age || cat.age_category}
+                              <span className="mx-1">·</span>
+                              {cat.breed}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              登録: {new Date(cat.created_at).toLocaleDateString("ja-JP")}
                             </div>
                           </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="text-gray-700">
-                            {cat.gender === "male" ? "♂ オス" : cat.gender === "female" ? "♀ メス" : "不明"}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {cat.estimated_age || cat.age_category || "不明"}
-                          </p>
-                        </td>
-                        <td className="px-6 py-4">{getStatusBadge(cat.status)}</td>
-                        <td className="px-6 py-4 text-gray-500 text-sm">
-                          {new Date(cat.created_at).toLocaleDateString("ja-JP")}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                          <div className="flex items-center text-gray-300">
+                            ›
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
+            </>
           ) : (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
               <div className="text-6xl mb-4">🐱</div>

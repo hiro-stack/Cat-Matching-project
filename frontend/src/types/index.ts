@@ -116,11 +116,15 @@ export interface CatDetail extends Omit<CatList, 'main_image_url'> {
   health_notes?: string;
 
   // Personality
-  human_distance: string;
+  affection_level: number;
+  maintenance_level: string;
   activity_level: string;
   personality: string;
 
   // Transfer Conditions
+  is_single_ok: boolean;
+  is_elderly_ok: boolean;
+  other_terms?: string;
   interview_format: string;
   trial_period?: string;
   transfer_fee: number;

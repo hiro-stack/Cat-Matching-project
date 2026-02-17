@@ -10,10 +10,27 @@ class ShelterSerializer(serializers.ModelSerializer):
             'address', 'postcode', 'email', 'phone', 'website_url', 'sns_url',
             'business_hours', 'transfer_available_hours', 
             'registration_number', 'description', 
+            'logo_image', 'header_image', 'public_profile_enabled',
+            'rescue_accepting', 'rescue_area_text', 'rescue_notes',
+            'support_goods_url', 'support_donation_url', 'support_message',
             'verification_status', 'contact_verified', 'review_message',
             'created_at', 'updated_at', 'representative'
         ]
         read_only_fields = ['id', 'verification_status', 'contact_verified', 'review_message', 'created_at', 'updated_at']
+
+class ShelterPublicSerializer(serializers.ModelSerializer):
+    """一般公開用の団体詳細シリアライザー"""
+    class Meta:
+        model = Shelter
+        fields = [
+            'id', 'name', 'shelter_type', 'prefecture', 'city',
+            'logo_image', 'header_image', 'description',
+            'website_url', 'sns_url',
+            'rescue_accepting', 'rescue_area_text', 'rescue_notes',
+            'support_goods_url', 'support_donation_url', 'support_message',
+            'created_at'
+        ]
+        read_only_fields = fields
 
 class ShelterRegistrationSerializer(serializers.Serializer):
     """保護団体＋管理ユーザー登録用シリアライザー (詳細Ver)"""

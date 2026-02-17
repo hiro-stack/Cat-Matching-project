@@ -1,447 +1,387 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
-import Cookies from "js-cookie";
+import { 
+  Save, 
+  Globe, 
+  MessageSquare, 
+  Heart, 
+  Twitter, 
+  Upload, 
+  X,
+  Info,
+  ExternalLink,
+  Lock,
+  Eye,
+  Camera,
+  Package
+} from "lucide-react";
 import api from "@/lib/api";
-import Header from "@/components/common/Header";
-import Footer from "@/components/common/Footer";
-import { ArrowLeft, Save, Building, MapPin, Globe, Phone, Mail, Clock, ShieldCheck, AlertCircle } from "lucide-react";
+import { sheltersService } from "@/services/shelters";
+import { compressImage } from "@/utils/image";
+import { toast } from "react-hot-toast";
 
-interface Shelter {
-  id: number;
-  name: string;
-  shelter_type: string;
-  prefecture: string;
-  city: string;
-  address: string;
-  postcode: string;
-  email: string;
-  phone: string;
-  website_url: string;
-  sns_url: string;
-  business_hours: string;
-  transfer_available_hours: string;
-  registration_number: string;
-  description: string;
-  verification_status: string;
-}
-
-export default function ShelterProfilePage() {
+export default function ShelterProfileEditPage() {
   const router = useRouter();
-  const [shelter, setShelter] = useState<Shelter | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const [shelter, setShelter] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  const [formData, setFormData] = useState<Partial<Shelter>>({});
+  
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const headerInputRef = useRef<HTMLInputElement>(null);
+  
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [headerPreview, setHeaderPreview] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
-      const token = Cookies.get("access_token");
-      if (!token) {
-        router.push("/shelter/login");
-        return;
-      }
-
+    const fetchShelter = async () => {
       try {
-        // ユーザー情報で権限チェック
-        const profileRes = await api.get("/api/accounts/profile/");
-        const userData = profileRes.data;
-        setIsAdmin(userData.is_superuser || userData.shelter_role === "admin");
-
-        // 団体情報取得
-        const shelterRes = await api.get("/api/shelters/my-shelter/");
-        setShelter(shelterRes.data);
-        setFormData(shelterRes.data);
-      } catch (err: any) {
-        console.error("Failed to fetch data:", err);
-        setError("団体情報の取得に失敗しました。");
+        const data = await sheltersService.getMyShelter();
+        setShelter(data);
+        setLogoPreview(data.logo_image);
+        setHeaderPreview(data.header_image);
+      } catch (err) {
+        console.error("Failed to fetch shelter:", err);
+        toast.error("団体情報の取得に失敗しました。");
       } finally {
         setIsLoading(false);
       }
     };
+    fetchShelter();
+  }, []);
 
-    fetchData();
-  }, [router]);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+    
+    setShelter((prev: any) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value
+    }));
+  };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'header') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const compressed = await compressImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (type === 'logo') setLogoPreview(reader.result as string);
+        else setHeaderPreview(reader.result as string);
+      };
+      reader.readAsDataURL(compressed);
+      
+      setShelter((prev: any) => ({
+        ...prev,
+        [type === 'logo' ? 'logo_image' : 'header_image']: compressed
+      }));
+    } catch (err) {
+      console.error("Image processing failed:", err);
+      toast.error("画像の処理に失敗しました。");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAdmin) return;
-
     setIsSaving(true);
-    setError("");
-    setSuccess("");
-
+    
     try {
-      const response = await api.patch(`/api/shelters/${shelter?.id}/`, formData);
-      setShelter(response.data);
-      setFormData(response.data);
-      setIsEditing(false);
-      setSuccess("団体情報を更新しました。");
-      // 3秒後に成功メッセージを消す
-      setTimeout(() => setSuccess(""), 3000);
-    } catch (err: any) {
-      console.error("Failed to update shelter:", err);
-      setError("更新に失敗しました。入力内容を確認してください。");
+      const formData = new FormData();
+      Object.keys(shelter).forEach(key => {
+        if (key === 'logo_image' || key === 'header_image') {
+          if (shelter[key] instanceof File || shelter[key] instanceof Blob) {
+            formData.append(key, shelter[key]);
+          }
+        } else if (typeof shelter[key] === 'boolean') {
+          formData.append(key, shelter[key] ? 'true' : 'false');
+        } else if (shelter[key] !== null) {
+          formData.append(key, shelter[key]);
+        }
+      });
+
+      await api.patch(`/api/shelters/${shelter.id}/`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      toast.success("プロフィールを更新しました。");
+      router.refresh();
+    } catch (err) {
+      console.error("Failed to update profile:", err);
+      toast.error("更新に失敗しました。詳細を確認してください。");
     } finally {
       setIsSaving(false);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (!shelter) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-center bg-white p-8 rounded-3xl shadow-sm border border-gray-100 max-w-md w-full">
-          <div className="text-6xl mb-4">🏢</div>
-          <p className="text-gray-500 mb-6">所属する保護団体の情報が見つかりませんでした。</p>
-          <button onClick={() => router.back()} className="w-full py-3 bg-gray-100 text-gray-700 rounded-2xl font-bold hover:bg-gray-200 transition-all">
-            戻る
-          </button>
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <div className="p-10 text-center">読み込み中...</div>;
+  if (!shelter) return <div className="p-10 text-center">団体情報が見つかりません。</div>;
 
   return (
-    <div className="min-h-screen bg-[#f8fafc]">
-      <Header />
-      
-      <main className="max-w-4xl mx-auto px-4 pt-24 pb-20">
-        {/* Header Navigation */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="space-y-1">
-            <Link href="/shelter/dashboard" className="inline-flex items-center text-sm text-gray-500 hover:text-blue-600 transition-colors">
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              ダッシュボードへ
-            </Link>
-            <h1 className="text-2xl font-bold text-gray-900">団体プロフィール</h1>
-          </div>
-          
-          {isAdmin && !isEditing && (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="px-6 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-sm transition-all"
-            >
-              編集する
-            </button>
-          )}
+    <div className="max-w-5xl mx-auto px-4 py-10">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-black text-gray-900 flex items-center gap-3">
+            <span className="p-2 bg-indigo-100 text-indigo-600 rounded-2xl"><Globe className="w-8 h-8" /></span>
+            団体プロフィール編集
+          </h1>
+          <p className="text-gray-500 mt-2">一般公開される団体の情報を管理します。</p>
+        </div>
+        
+        <div className="flex gap-4">
+           {shelter.public_profile_enabled && (
+             <Link 
+               href={`/shelters/${shelter.id}`} 
+               target="_blank"
+               className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 transition-all text-sm font-bold"
+             >
+               <Eye className="w-4 h-4" /> 公開ページを確認
+             </Link>
+           )}
+           <button
+             onClick={handleSubmit}
+             disabled={isSaving}
+             className="flex items-center gap-2 px-8 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all font-bold shadow-lg shadow-indigo-100 disabled:opacity-50"
+           >
+             <Save className="w-5 h-5" />
+             {isSaving ? "保存中..." : "保存する"}
+           </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <div className="lg:col-span-2 space-y-8">
+          {/* 基本設定 */}
+          <section className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+             <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                  <span className="p-1.5 bg-pink-100 text-pink-600 rounded-lg"><Info className="w-5 h-5" /></span>
+                  一般公開・基本情報
+                </h2>
+                <div className="flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-2xl border border-gray-100">
+                   <span className="text-sm font-bold text-gray-700">プロフィールの公開</span>
+                   <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="public_profile_enabled"
+                      checked={shelter.public_profile_enabled}
+                      onChange={handleChange}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                  </label>
+                </div>
+             </div>
+
+             <div className="space-y-6">
+               <div className="relative group overflow-hidden rounded-2xl h-48 bg-gray-100">
+                  {headerPreview ? (
+                    <Image src={headerPreview} alt="Header" fill className="object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                      <Camera className="w-10 h-10 mb-2" />
+                      <span className="text-xs font-bold uppercase tracking-wider">ヘッダー画像</span>
+                    </div>
+                  )}
+                  <button 
+                    onClick={() => headerInputRef.current?.click()}
+                    className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white gap-2 font-bold"
+                  >
+                    <Upload className="w-5 h-5" /> 変更する
+                  </button>
+                  <input ref={headerInputRef} type="file" className="hidden" onChange={(e) => handleImageChange(e, 'header')} accept="image/*" />
+               </div>
+
+               <div className="flex gap-6 items-end -mt-12 px-6">
+                  <div className="relative group w-24 h-24 rounded-3xl bg-white p-1 shadow-lg border border-gray-100 overflow-hidden">
+                    {logoPreview ? (
+                      <div className="relative w-full h-full rounded-2xl overflow-hidden">
+                        <Image src={logoPreview} alt="Logo" fill className="object-cover" />
+                      </div>
+                    ) : (
+                      <div className="w-full h-full rounded-2xl bg-gray-50 flex items-center justify-center text-gray-300">
+                        🏠
+                      </div>
+                    )}
+                    <button 
+                      onClick={() => logoInputRef.current?.click()}
+                      className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"
+                    >
+                      <Camera className="w-6 h-6" />
+                    </button>
+                    <input ref={logoInputRef} type="file" className="hidden" onChange={(e) => handleImageChange(e, 'logo')} accept="image/*" />
+                  </div>
+                  <div className="pb-2">
+                    <p className="text-xs font-bold text-gray-400 mb-1">団体のシンボルマーク</p>
+                    <p className="text-[10px] text-gray-400">推奨: 500x500px以上の正方形</p>
+                  </div>
+               </div>
+
+               <div>
+                 <label className="block text-sm font-bold text-gray-700 mb-2">団体紹介文</label>
+                 <textarea
+                   name="description"
+                   value={shelter.description || ""}
+                   onChange={handleChange}
+                   rows={6}
+                   className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none transition-all resize-none"
+                   placeholder="活動方針、譲渡の流れ、カフェの雰囲気、SNSへの誘導などを記入してください。"
+                 />
+                 <p className="mt-1.5 text-[10px] text-gray-400">※Markdownには対応していません。テキストのみで魅力的に伝えてください。</p>
+               </div>
+             </div>
+          </section>
+
+          {/* 保護受付設定 */}
+          <section className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+             <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+               <span className="p-1.5 bg-blue-100 text-blue-600 rounded-lg"><Heart className="w-5 h-5" /></span>
+               一般からの保護受付
+             </h2>
+
+             <div className="space-y-6">
+               <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-100 text-blue-600 rounded-xl">
+                      <MessageSquare className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-blue-800">保護に関する相談を受け付ける</p>
+                      <p className="text-[10px] text-blue-600">プロフィールに受付ステータスが表示されます。</p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="rescue_accepting"
+                      checked={shelter.rescue_accepting}
+                      onChange={handleChange}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+               </div>
+
+               <div className={`space-y-4 transition-all ${shelter.rescue_accepting ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                 <div>
+                   <label className="block text-sm font-bold text-gray-700 mb-2">受付対応エリア</label>
+                   <input
+                     name="rescue_area_text"
+                     value={shelter.rescue_area_text || ""}
+                     onChange={handleChange}
+                     className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-indigo-500 outline-none transition-all"
+                     placeholder="例：東京都内、〇〇市周辺、一都三県など"
+                   />
+                 </div>
+                 <div>
+                   <label className="block text-sm font-bold text-gray-700 mb-2">注意事項・定型文</label>
+                   <textarea
+                     name="rescue_notes"
+                     value={shelter.rescue_notes || ""}
+                     onChange={handleChange}
+                     rows={3}
+                     className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-indigo-500 outline-none transition-all resize-none"
+                     placeholder="例：緊急時は行政へ、持ち込み不可、事前連絡必須など"
+                   />
+                 </div>
+               </div>
+             </div>
+          </section>
         </div>
 
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 text-sm font-bold animate-shake">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            {error}
-          </div>
-        )}
+        {/* 右カラム：支援リンク */}
+        <div className="space-y-8">
+           <section className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm border-t-8 border-t-orange-400">
+              <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span className="p-1.5 bg-orange-100 text-orange-600 rounded-lg"><Package className="w-5 h-5" /></span>
+                支援募集の設定
+              </h2>
+              
+              <div className="space-y-6">
+                <div>
+                   <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+                     物資支援リンク
+                     <ExternalLink className="w-3 h-3 text-gray-400" />
+                   </label>
+                   <input
+                     name="support_goods_url"
+                     value={shelter.support_goods_url || ""}
+                     onChange={handleChange}
+                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none text-sm"
+                     placeholder="Amazon欲しいものリスト等"
+                   />
+                </div>
+                
+                <div>
+                   <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+                     寄付リンク
+                     <ExternalLink className="w-3 h-3 text-gray-400" />
+                   </label>
+                   <input
+                     name="support_donation_url"
+                     value={shelter.support_donation_url || ""}
+                     onChange={handleChange}
+                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none text-sm"
+                     placeholder="公式寄付ページ、Square等"
+                   />
+                </div>
 
-        {success && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-100 rounded-2xl flex items-center gap-3 text-green-600 text-sm font-bold">
-            <ShieldCheck className="w-5 h-5 flex-shrink-0" />
-            {success}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* 基本情報セクション */}
-          <section className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 transition-all">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="p-2 bg-blue-50 rounded-xl">
-                <Building className="w-6 h-6 text-blue-500" />
+                <div>
+                   <label className="block text-sm font-bold text-gray-700 mb-2">支援のお願いメッセージ</label>
+                   <textarea
+                     name="support_message"
+                     value={shelter.support_message || ""}
+                     onChange={handleChange}
+                     rows={3}
+                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 outline-none transition-all text-sm resize-none"
+                     placeholder="例：毎日使う消耗品が不足しています。ご協力お願いします。"
+                   />
+                </div>
               </div>
-              <h2 className="text-lg font-bold text-gray-800">基本情報</h2>
-            </div>
+           </section>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-bold text-gray-700 mb-2">団体名 / カフェ名</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name || ""}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium"
-                    required
-                  />
-                ) : (
-                  <p className="px-4 py-3 bg-gray-50/50 rounded-2xl font-bold text-gray-900">{shelter.name}</p>
-                )}
+           <section className="bg-gray-900 rounded-3xl p-8 text-white shadow-lg overflow-hidden relative">
+              <div className="absolute top-0 right-0 p-8 opacity-10">
+                <Twitter className="w-24 h-24" />
               </div>
-
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">都道府県</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="prefecture"
-                    value={formData.prefecture || ""}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium"
-                    required
-                  />
-                ) : (
-                  <p className="px-4 py-3 bg-gray-50/50 rounded-2xl font-bold text-gray-900">{shelter.prefecture}</p>
-                )}
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                SNS/Web連携
+              </h2>
+              <div className="space-y-4 relative z-10">
+                <div>
+                   <label className="block text-[10px] font-black uppercase text-indigo-300 mb-2 tracking-widest">公式サイト URL</label>
+                   <input
+                     name="website_url"
+                     value={shelter.website_url || ""}
+                     onChange={handleChange}
+                     className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm focus:bg-white/20 outline-none transition-all"
+                   />
+                </div>
+                <div>
+                   <label className="block text-[10px] font-black uppercase text-indigo-300 mb-2 tracking-widest">SNS / 活動報告 URL</label>
+                   <input
+                     name="sns_url"
+                     value={shelter.sns_url || ""}
+                     onChange={handleChange}
+                     className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm focus:bg-white/20 outline-none transition-all"
+                   />
+                </div>
               </div>
+           </section>
 
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">市区町村</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="city"
-                    value={formData.city || ""}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium"
-                    required
-                  />
-                ) : (
-                  <p className="px-4 py-3 bg-gray-50/50 rounded-2xl font-bold text-gray-900">{shelter.city}</p>
-                )}
+           <div className="p-6 bg-amber-50 rounded-3xl border border-amber-100 flex items-start gap-3">
+              <Lock className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+              <div className="text-[11px] text-amber-800 leading-relaxed font-medium">
+                プロフィールの更新には管理者権限が必要です。スタッフ権限での変更は制限されています。
               </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-bold text-gray-700 mb-2">店舗住所</label>
-                {isEditing ? (
-                  <textarea
-                    name="address"
-                    value={formData.address || ""}
-                    onChange={handleChange}
-                    rows={2}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium resize-none"
-                    required
-                  />
-                ) : (
-                  <p className="px-4 py-3 bg-gray-50/50 rounded-2xl font-bold text-gray-900">{shelter.address}</p>
-                )}
-              </div>
-            </div>
-          </section>
-
-          {/* 連絡先・ウェブサイト */}
-          <section className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 transition-all">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="p-2 bg-pink-50 rounded-xl">
-                <Mail className="w-6 h-6 text-pink-500" />
-              </div>
-              <h2 className="text-lg font-bold text-gray-800">連絡先・公式情報</h2>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">代表メールアドレス</label>
-                {isEditing ? (
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email || ""}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium"
-                    required
-                  />
-                ) : (
-                  <p className="px-4 py-3 bg-gray-50/50 rounded-2xl font-bold text-gray-900">{shelter.email}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">代表電話番号</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="phone"
-                    value={formData.phone || ""}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium"
-                    required
-                  />
-                ) : (
-                  <p className="px-4 py-3 bg-gray-50/50 rounded-2xl font-bold text-gray-900">{shelter.phone}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">公式サイトURL</label>
-                {isEditing ? (
-                  <input
-                    type="url"
-                    name="website_url"
-                    value={formData.website_url || ""}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium"
-                    placeholder="https://..."
-                  />
-                ) : (
-                  <div className="px-4 py-3 bg-gray-50/50 rounded-2xl font-bold text-gray-900 overflow-hidden text-ellipsis">
-                    {shelter.website_url ? (
-                      <a href={shelter.website_url} target="_blank" className="text-blue-600 hover:underline inline-flex items-center gap-1">
-                        {shelter.website_url} <Globe className="w-3.5 h-3.5" />
-                      </a>
-                    ) : "未登録"}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">SNS URL</label>
-                {isEditing ? (
-                  <input
-                    type="url"
-                    name="sns_url"
-                    value={formData.sns_url || ""}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium"
-                    placeholder="https://instagram.com/..."
-                  />
-                ) : (
-                  <div className="px-4 py-3 bg-gray-50/50 rounded-2xl font-bold text-gray-900 overflow-hidden text-ellipsis">
-                    {shelter.sns_url ? (
-                      <a href={shelter.sns_url} target="_blank" className="text-pink-600 hover:underline inline-flex items-center gap-1">
-                        {shelter.sns_url} <Globe className="w-3.5 h-3.5" />
-                      </a>
-                    ) : "未登録"}
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-
-          {/* 営業情報 */}
-          <section className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 transition-all">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="p-2 bg-purple-50 rounded-xl">
-                <Clock className="w-6 h-6 text-purple-500" />
-              </div>
-              <h2 className="text-lg font-bold text-gray-800">営業・譲渡対応情報</h2>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">営業日・営業時間・定休日</label>
-                {isEditing ? (
-                  <textarea
-                    name="business_hours"
-                    value={formData.business_hours || ""}
-                    onChange={handleChange}
-                    rows={3}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium"
-                    placeholder="例: 平日11:00-20:00, 土日祝10:00-19:00, 定休日: 水曜"
-                  />
-                ) : (
-                  <p className="px-4 py-3 bg-gray-50/50 rounded-2xl font-bold text-gray-900 whitespace-pre-wrap">{shelter.business_hours || "未登録"}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">譲渡対応可能な時間帯</label>
-                {isEditing ? (
-                  <textarea
-                    name="transfer_available_hours"
-                    value={formData.transfer_available_hours || ""}
-                    onChange={handleChange}
-                    rows={2}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium"
-                    placeholder="例: 平日14:00-16:00"
-                  />
-                ) : (
-                  <p className="px-4 py-3 bg-gray-50/50 rounded-2xl font-bold text-gray-900 whitespace-pre-wrap">{shelter.transfer_available_hours || "未登録"}</p>
-                )}
-              </div>
-            </div>
-          </section>
-
-          {/* 団体紹介 */}
-          <section className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 transition-all">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="p-2 bg-gray-50 rounded-xl">
-                <AlertCircle className="w-6 h-6 text-gray-500" />
-              </div>
-              <h2 className="text-lg font-bold text-gray-800">団体紹介・登録番号</h2>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">団体説明</label>
-                {isEditing ? (
-                  <textarea
-                    name="description"
-                    value={formData.description || ""}
-                    onChange={handleChange}
-                    rows={5}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium"
-                  />
-                ) : (
-                  <p className="px-4 py-3 bg-gray-50/50 rounded-2xl text-gray-700 whitespace-pre-wrap leading-relaxed">{shelter.description || "未登録"}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">動物取扱業登録番号</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="registration_number"
-                    value={formData.registration_number || ""}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium"
-                  />
-                ) : (
-                  <p className="px-4 py-3 bg-gray-50/50 rounded-2xl font-bold text-gray-900">{shelter.registration_number || "未登録"}</p>
-                )}
-              </div>
-            </div>
-          </section>
-
-          {/* Form Actions (Only in Edit mode) */}
-          {isEditing && (
-            <div className="flex items-center gap-4 fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-4xl z-50 animate-slide-up">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsEditing(false);
-                  setFormData(shelter);
-                  setError("");
-                }}
-                className="flex-1 py-4 bg-white border border-gray-200 text-gray-600 rounded-2xl font-bold shadow-xl hover:bg-gray-50 transition-all"
-              >
-                キャンセル
-              </button>
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-xl shadow-blue-200 hover:bg-blue-700 disabled:bg-gray-400 transition-all flex items-center justify-center gap-2"
-              >
-                {isSaving ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Save className="w-5 h-5" />
-                )}
-                保存して更新する
-              </button>
-            </div>
-          )}
-        </form>
-      </main>
-
-      <Footer />
+           </div>
+        </div>
+      </div>
     </div>
   );
 }

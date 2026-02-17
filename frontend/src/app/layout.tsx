@@ -1,6 +1,8 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
 
+import { Toaster } from "react-hot-toast";
+
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
@@ -15,7 +17,42 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        {children}
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            success: {
+              style: {
+                background: '#f0fdf4',
+                color: '#166534',
+                border: '1px solid #bbf7d0',
+              },
+            },
+            error: {
+              style: {
+                background: '#fef2f2',
+                color: '#991b1b',
+                border: '1px solid #fecaca',
+              },
+            },
+            loading: {
+              style: {
+                background: '#f8fafc',
+                color: '#0f172a',
+                border: '1px solid #e2e8f0',
+              },
+            },
+            style: {
+              padding: '16px',
+              borderRadius: '12px',
+              fontSize: '14px',
+              fontWeight: 500,
+              boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+            },
+          }}
+        />
+      </body>
     </html>
   );
 }

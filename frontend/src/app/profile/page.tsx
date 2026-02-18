@@ -225,8 +225,6 @@ export default function ProfilePage() {
                                     {renderProfileItem("年齢", profile.age ? `${profile.age}歳` : null)}
                                     {renderProfileItem("性別", profile.gender ? GENDER_LABELS[profile.gender] : null)}
                                     {renderProfileItem("居住エリア", profile.residence_area)}
-                                    {renderProfileItem("住宅形態", profile.housing_type ? HOUSING_TYPE_LABELS[profile.housing_type] : null)}
-                                    {renderProfileItem("ペット可否", profile.pet_allowed ? PET_ALLOWED_LABELS[profile.pet_allowed] : null)}
                                     {renderProfileItem("完全室内飼い", profile.indoors_agreement ? "同意済み ✅" : "未同意 ⚠️")}
                                 </div>
                             </section>
@@ -242,7 +240,6 @@ export default function ProfilePage() {
                                     {renderProfileItem("希望の距離感", profile.cat_distance ? CAT_DISTANCE_LABELS[profile.cat_distance] : null, "📏")}
                                     {renderProfileItem("家の雰囲気", profile.home_atmosphere ? HOME_ATMOSPHERE_LABELS[profile.home_atmosphere] : null, "🎵")}
                                     {renderProfileItem("来客頻度", profile.visitor_frequency ? VISITOR_FREQUENCY_LABELS[profile.visitor_frequency] : null, "👥")}
-                                    {renderProfileItem("引っ越し予定", profile.moving_plan ? MOVING_PLAN_LABELS[profile.moving_plan] : null, "🚚")}
                                 </div>
                             </section>
                         </>

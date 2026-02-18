@@ -35,7 +35,9 @@ def create_test_data():
             address='東京都渋谷区渋谷1-1-1',
             phone='03-1234-5678',
             registration_number='NPO-12345',
-            description='東京都内で保護猫活動を行っています。'
+            description='東京都内で保護猫活動を行っています。',
+            public_profile_enabled=True,
+            verification_status='approved'
         )
         print(f"✓ 保護団体を作成しました: {shelter.name}")
         
@@ -90,7 +92,8 @@ def create_test_data():
             vaccination=True,
             neutered=True,
             description='とても可愛い三毛猫です。家族を探しています。',
-            status='open'
+            status='open',
+            is_public=True
         )
         print(f"✓ 保護猫を作成しました: {cat1.name}")
         
@@ -108,7 +111,8 @@ def create_test_data():
             vaccination=True,
             neutered=False,
             description='活発な黒猫の男の子です。',
-            status='open'
+            status='open',
+            is_public=True
         )
         print(f"✓ 保護猫を作成しました: {cat2.name}")
     

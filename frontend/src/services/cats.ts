@@ -12,6 +12,9 @@ export const catsService = {
       if (filters.age_category) params.append('age_category', filters.age_category);
       if (filters.prefecture) params.append('prefecture', filters.prefecture);
       if (filters.activity_level) params.append('activity_level', filters.activity_level);
+      if (filters.affection_level) params.append('affection_level', String(filters.affection_level));
+      if (filters.maintenance_level) params.append('maintenance_level', filters.maintenance_level);
+      if (filters.shelter_id) params.append('shelter_id', String(filters.shelter_id));
       // Backendのページング仕様に合わせる
       if (filters.page) params.append('page', String(filters.page));
     }

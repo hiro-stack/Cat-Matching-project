@@ -93,30 +93,34 @@ class ApplicantProfile(models.Model):
     # 居住情報
     residence_area = models.CharField(
         max_length=100,
-        verbose_name='居住エリア（都道府県 / 市区町村）',
+        verbose_name='居住エリア（都道府県）',
         null=True, blank=True
     )
     
-    HOUSING_TYPE_CHOICES = [
-        ('owned', '持ち家'),
-        ('rented', '賃貸'),
+    pet_policy_confirmed = models.BooleanField(
+        default=False,
+        verbose_name='住居のペット可否について確認済み'
+    )
+    
+    MARITAL_STATUS_CHOICES = [
+        ('married', '既婚者'),
+        ('single', '単身者'),
     ]
-    housing_type = models.CharField(
+    marital_status = models.CharField(
         max_length=20,
-        choices=HOUSING_TYPE_CHOICES,
-        verbose_name='住宅形態',
+        choices=MARITAL_STATUS_CHOICES,
+        verbose_name='既婚者か単身者の記入',
         null=True, blank=True
     )
     
-    PET_ALLOWED_CHOICES = [
-        ('allowed', '可（契約書あり）'),
-        ('planned', '確認予定'),
-        ('not_allowed', '不可'),
+    INCOME_STATUS_CHOICES = [
+        ('stable', '安定している'),
+        ('unstable', '不安定'),
     ]
-    pet_allowed = models.CharField(
+    income_status = models.CharField(
         max_length=20,
-        choices=PET_ALLOWED_CHOICES,
-        verbose_name='ペット可否',
+        choices=INCOME_STATUS_CHOICES,
+        verbose_name='収入状況',
         null=True, blank=True
     )
     
@@ -206,18 +210,8 @@ class ApplicantProfile(models.Model):
         null=True, blank=True
     )
     
-    # 引っ越し予定
-    MOVING_PLAN_CHOICES = [
-        ('none', 'なし'),
-        ('within_1_2_years', '1–2年以内'),
-        ('undecided', '未定'),
-    ]
-    moving_plan = models.CharField(
-        max_length=20,
-        choices=MOVING_PLAN_CHOICES,
-        verbose_name='引っ越し予定',
-        null=True, blank=True
-    )
+    # 引っ越し予定 (削除対象だが互換性のため一旦コメントアウト等はせず物理削除か?)
+    # ユーザー要望に従い物理削除
     
     def __str__(self):
         return f"{self.user.username}'s Profile"

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import Cookies from "js-cookie";
 import api from "@/lib/api";
 import { 
@@ -20,8 +21,10 @@ import {
   Clock,
   ExternalLink,
   ChevronRight,
-  Trash2
+  Trash2,
+  FileText
 } from "lucide-react";
+import { User } from "@/types";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
 
@@ -47,6 +50,10 @@ interface Application {
     name: string;
     primary_image?: string;
     breed?: string;
+    shelter?: {
+      id: number;
+      name: string;
+    };
   };
   applicant_info: {
     id: number;
@@ -59,8 +66,9 @@ interface Application {
       age: number | null;
       gender: string;
       residence_area: string;
-      housing_type: string;
-      pet_allowed: string;
+      marital_status: string;
+      income_status: string;
+      pet_policy_confirmed: boolean;
       indoors_agreement: boolean;
       absence_time: string;
       home_frequency: string;
@@ -68,7 +76,6 @@ interface Application {
       cat_distance: string;
       home_atmosphere: string;
       visitor_frequency: string;
-      moving_plan: string;
     };
   };
   status: string;
@@ -97,6 +104,7 @@ export default function ShelterApplicationDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'chat'>('chat'); // Mobile tab
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -106,7 +114,7 @@ export default function ShelterApplicationDetailPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [appRes, msgRes] = await Promise.all([
         api.get(`/api/applications/${applicationId}/`),
@@ -126,7 +134,16 @@ export default function ShelterApplicationDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [applicationId]);
+
+  const fetchCurrentUser = useCallback(async () => {
+    try {
+      const res = await api.get("/api/accounts/profile/");
+      setCurrentUser(res.data);
+    } catch (err) {
+      console.error("Failed to fetch current user:", err);
+    }
+  }, []);
 
   useEffect(() => {
     const token = Cookies.get("access_token");
@@ -136,12 +153,53 @@ export default function ShelterApplicationDetailPage() {
     }
 
     fetchData();
+    fetchCurrentUser();
     pollingInterval.current = setInterval(fetchData, 5000);
 
     return () => {
       if (pollingInterval.current) clearInterval(pollingInterval.current);
     };
-  }, [applicationId]);
+  }, [applicationId, fetchData, fetchCurrentUser, router]);
+
+  const fillTemplate = () => {
+    if (!application) return;
+    
+    const shelterName = application.cat_detail.shelter?.name || "当団体";
+    const staffName = currentUser?.username || "担当者";
+    const catName = application.cat_detail.name;
+    const applicantName = application.applicant_info.username;
+
+    const template = `件名：お見合い日程のご案内（${catName}）
+${applicantName}さま
+
+${shelterName}の${staffName}です。
+${catName}へのご応募ありがとうございます。
+
+お見合い（面談）日程の候補です。ご都合のよいものを1つ選んで返信してください。
+【形式】{来店/オンライン}
+【候補】
+A：{日付} {時間}
+B：{日付} {時間}
+C：{日付} {時間}
+
+もし合う候補がなければ、可能な曜日・時間帯（例：土日午前／平日19時以降）を教えてください。
+調整してご案内します。よろしくお願いします🐾
+
+${shelterName}
+${staffName}`;
+
+    setNewMessage(template);
+    
+    // Adjust textarea height
+    setTimeout(() => {
+      const textarea = document.getElementById('chat-textarea') as HTMLTextAreaElement;
+      if (textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+        textarea.focus();
+      }
+    }, 0);
+  };
 
   useEffect(() => {
     scrollToBottom();
@@ -295,7 +353,13 @@ export default function ShelterApplicationDetailPage() {
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-lg bg-gray-100 overflow-hidden border border-gray-100 flex-shrink-0">
                   {application.cat_detail.primary_image ? (
-                    <img src={application.cat_detail.primary_image} alt="" className="w-full h-full object-cover" />
+                    <Image 
+                      src={application.cat_detail.primary_image} 
+                      alt={application.cat_detail.name} 
+                      width={48}
+                      height={48}
+                      className="w-full h-full object-cover" 
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-2xl">🐱</div>
                   )}
@@ -423,9 +487,14 @@ export default function ShelterApplicationDetailPage() {
                   <UserIcon className="w-4 h-4" /> 基本情報
                 </h3>
                 <div className="flex items-start gap-4 mb-4">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-2xl border-4 border-white shadow-sm overflow-hidden">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-2xl border-4 border-white shadow-sm overflow-hidden relative">
                     {application.applicant_info.profile_image ? (
-                        <img src={application.applicant_info.profile_image} className="w-full h-full object-cover" alt="" />
+                        <Image 
+                          src={application.applicant_info.profile_image} 
+                          alt={application.applicant_info.username}
+                          fill
+                          className="object-cover" 
+                        />
                     ) : application.applicant_info.username.charAt(0).toUpperCase()}
                   </div>
                   <div>
@@ -442,14 +511,6 @@ export default function ShelterApplicationDetailPage() {
                 </div>
                 
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3 text-sm text-gray-600">
-                    <Mail className="w-4 h-4 text-gray-400" />
-                    <span className="break-all">{application.applicant_info.email}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm text-gray-600">
-                    <Phone className="w-4 h-4 text-gray-400" />
-                    <span>{application.applicant_info.phone_number || "未登録"}</span>
-                  </div>
                   <div className="flex items-start gap-3 text-sm text-gray-600">
                     <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
                     <span>{application.applicant_info.address || application.applicant_info.applicant_profile?.residence_area || "未登録"}</span>
@@ -463,16 +524,25 @@ export default function ShelterApplicationDetailPage() {
                   <Home className="w-4 h-4 text-blue-500" /> 生活環境・条件
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <InfoItem label="住宅形態" value={application.applicant_info.applicant_profile?.housing_type === 'owned' ? '持ち家' : application.applicant_info.applicant_profile?.housing_type === 'rented' ? '賃貸' : '不明'} />
-                  <InfoItem label="ペット可否" value={application.applicant_info.applicant_profile?.pet_allowed === 'allowed' ? '可' : '不明・確認済'} />
+                  <InfoItem label="家族構成" value={application.applicant_info.applicant_profile?.marital_status === 'married' ? '既婚者' : application.applicant_info.applicant_profile?.marital_status === 'single' ? '単身者' : '選択なし'} />
+                  <InfoItem label="収入状況" value={application.applicant_info.applicant_profile?.income_status === 'stable' ? '安定' : application.applicant_info.applicant_profile?.income_status === 'unstable' ? '不安定' : '選択なし'} />
+                  <InfoItem label="ペット飼育経験" value={
+                    application.applicant_info.applicant_profile?.cat_experience === 'none' ? 'なし' : 
+                    application.applicant_info.applicant_profile?.cat_experience === 'one' ? 'あり' : 
+                    application.applicant_info.applicant_profile?.cat_experience === 'multiple' ? '複数経験あり' : '不明'
+                  } />
+                  <InfoItem label="住居のペット確認" value={application.applicant_info.applicant_profile?.pet_policy_confirmed ? '済み' : '未確認'} />
                   <InfoItem label="留守時間" value={
                     application.applicant_info.applicant_profile?.absence_time === 'less_than_4' ? '4h未満' : 
                     application.applicant_info.applicant_profile?.absence_time === '4_to_8' ? '4-8h' : 
-                    application.applicant_info.applicant_profile?.absence_time === '8_plus' ? '8h以上' : '不明'
+                    application.applicant_info.applicant_profile?.absence_time === '8_to_12' ? '8-12h' : 
+                    application.applicant_info.applicant_profile?.absence_time === 'more_than_12' ? '12h以上' : '不明'
                   } />
-                  <InfoItem label="在宅頻度" value={application.applicant_info.applicant_profile?.home_frequency === 'high' ? '高' : '普通'} />
-                  <InfoItem label="飼育経験" value={application.applicant_info.applicant_profile?.cat_experience === 'none' ? 'なし' : 'あり'} />
-                  <InfoItem label="来客頻度" value={application.applicant_info.applicant_profile?.visitor_frequency === 'low' ? '少なめ' : '普通'} />
+                  <InfoItem label="在宅頻度" value={
+                    application.applicant_info.applicant_profile?.home_frequency === 'high' ? '高い' : 
+                    application.applicant_info.applicant_profile?.home_frequency === 'medium' ? '普通' : 
+                    application.applicant_info.applicant_profile?.home_frequency === 'low' ? '低い' : '不明'
+                  } />
                 </div>
               </section>
 
@@ -493,7 +563,7 @@ export default function ShelterApplicationDetailPage() {
                   <AgreementItem label="医療費負担の理解" checked={application.medical_cost_understanding} />
                   <AgreementItem label="家族全員の同意" checked={application.family_consent} />
                   <AgreementItem label="アレルギー対策済み" checked={application.allergy_status} />
-                  <AgreementItem label="収入状況" value={application.income_status === 'stable' ? '安定' : '不安定'} />
+                  <AgreementItem label="完全室内飼い" checked={application.applicant_info.applicant_profile?.indoors_agreement} />
                 </div>
               </section>
               
@@ -530,9 +600,14 @@ export default function ShelterApplicationDetailPage() {
                     <div key={msg.id} className={`flex ${isRight ? 'justify-end' : 'justify-start'} w-full`}>
                        <div className={`flex gap-3 max-w-[85%] sm:max-w-[75%] ${isRight ? 'flex-row-reverse' : 'flex-row'} items-end`}>
                           {!isRight && (
-                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 text-xs overflow-hidden border border-white">
+                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 text-xs overflow-hidden border border-white relative">
                                {application.applicant_info.profile_image ? (
-                                   <img src={application.applicant_info.profile_image} className="w-full h-full object-cover" alt="" />
+                                   <Image 
+                                     src={application.applicant_info.profile_image} 
+                                     alt={application.applicant_info.username}
+                                     fill
+                                     className="object-cover" 
+                                   />
                                ) : "👤"}
                             </div>
                           )}
@@ -543,7 +618,7 @@ export default function ShelterApplicationDetailPage() {
                                   {isShelter ? "保護団体（自店舗）" : application.applicant_info.username}
                                </span>
                              )}
-                             <div className={`rounded-2xl px-4 py-2.5 shadow-sm text-sm leading-relaxed ${
+                             <div className={`rounded-2xl px-4 py-2.5 shadow-sm text-sm leading-relaxed whitespace-pre-wrap ${
                                isRight 
                                  ? 'bg-blue-600 text-white rounded-br-none' 
                                  : 'bg-white text-gray-800 rounded-bl-none border border-gray-100'
@@ -585,9 +660,9 @@ export default function ShelterApplicationDetailPage() {
                           type="button"
                           onClick={() => handleUpdateStatus('trial')}
                           disabled={isUpdatingStatus}
-                          className="whitespace-nowrap flex items-center gap-2 px-5 py-2.5 bg-purple-100 text-purple-800 border border-purple-200 rounded-full hover:bg-purple-200 transition-all text-sm font-bold shadow-sm active:scale-95"
+                          className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 text-purple-800 border border-purple-200 rounded-full hover:bg-purple-200 transition-all text-xs font-bold shadow-sm active:scale-95"
                         >
-                          <Clock className="w-4 h-4" />
+                          <Clock className="w-3.5 h-3.5" />
                           トライアルに移行
                         </button>
                       )}
@@ -609,36 +684,54 @@ export default function ShelterApplicationDetailPage() {
                         <XCircle className="w-3.5 h-3.5" />
                         お断り（お見送り）
                       </button>
+                      <div className="h-4 w-px bg-gray-200 mx-1" />
+                      {currentUser?.shelter_role !== 'staff' && (
+                        <button
+                          type="button"
+                          onClick={fillTemplate}
+                          className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full hover:bg-blue-100 transition-all text-xs font-bold shadow-sm active:scale-95"
+                        >
+                          <FileText className="w-4 h-4" />
+                          日程案内(定型文)
+                        </button>
+                      )}
                     </div>
                   )}
 
-                  <form onSubmit={handleSendMessage} className="flex gap-2 items-center bg-gray-100 rounded-2xl px-4 py-1.5 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
-                    <textarea
-                      rows={1}
-                      value={newMessage}
-                      onChange={(e) => {
-                        setNewMessage(e.target.value);
-                        e.target.style.height = 'auto';
-                        e.target.style.height = e.target.scrollHeight + 'px';
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSendMessage();
-                        }
-                      }}
-                      placeholder="メッセージを入力..."
-                      className="flex-1 bg-transparent border-none rounded-xl py-2.5 focus:outline-none text-sm resize-none max-h-32 min-h-[44px]"
-                      disabled={isSending}
-                    />
-                    <button
-                      type="submit"
-                      disabled={!newMessage.trim() || isSending}
-                      className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white rounded-xl w-10 h-10 flex items-center justify-center transition-colors flex-shrink-0 shadow-sm"
-                    >
-                      <Send className="w-5 h-5" />
-                    </button>
-                  </form>
+                  {currentUser?.shelter_role === 'staff' ? (
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
+                      <p className="text-xs text-gray-500 font-medium">チャットは閲覧のみ可能です（送信権限がありません）</p>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleSendMessage} className="flex gap-2 items-center bg-gray-100 rounded-2xl px-4 py-1.5 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                      <textarea
+                        id="chat-textarea"
+                        rows={1}
+                        value={newMessage}
+                        onChange={(e) => {
+                          setNewMessage(e.target.value);
+                          e.target.style.height = 'auto';
+                          e.target.style.height = e.target.scrollHeight + 'px';
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSendMessage();
+                          }
+                        }}
+                        placeholder="メッセージを入力..."
+                        className="flex-1 bg-transparent border-none rounded-xl py-2.5 focus:outline-none text-sm resize-none max-h-64 min-h-[44px]"
+                        disabled={isSending}
+                      />
+                      <button
+                        type="submit"
+                        disabled={!newMessage.trim() || isSending}
+                        className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white rounded-xl w-10 h-10 flex items-center justify-center transition-colors flex-shrink-0 shadow-sm"
+                      >
+                        <Send className="w-5 h-5" />
+                      </button>
+                    </form>
+                  )}
                 </div>
               )}
             </div>

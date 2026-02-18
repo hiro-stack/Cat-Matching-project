@@ -9,6 +9,10 @@ import api from "@/lib/api";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
 import { CatList } from "@/types";
+import { getImageUrl } from "@/utils/image";
+import { ImageWithFallback } from "@/components/common/ImageWithFallback";
+import { Trash2, Edit } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 export default function ShelterCatsPage() {
   const router = useRouter();
@@ -47,6 +51,30 @@ export default function ShelterCatsPage() {
 
     fetchMyCats();
   }, [router]);
+  
+  const handleDelete = async (e: React.MouseEvent, catId: number, catName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!window.confirm(`${catName}ちゃんを削除してもよろしいですか？\nこの操作は取り消せません。`)) {
+      return;
+    }
+    
+    try {
+      const token = Cookies.get("access_token");
+      if (!token) {
+        router.push("/shelter/login");
+        return;
+      }
+      
+      await api.delete(`/api/cats/${catId}/`);
+      setCats(cats.filter(cat => cat.id !== catId));
+      toast.success(`${catName}ちゃんを削除しました。`);
+    } catch (err: any) {
+      console.error("Failed to delete cat:", err);
+      toast.error("削除に失敗しました。時間をおいて再度お試しください。");
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { label: string; color: string }> = {
@@ -196,11 +224,10 @@ export default function ShelterCatsPage() {
                                   <div className="flex items-center gap-3">
                                     <div className="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0 group-hover:scale-105 transition-transform relative">
                                       {cat.primary_image ? (
-                                        <Image
+                                        <ImageWithFallback
                                           src={cat.primary_image}
                                           alt={cat.name}
-                                          fill
-                                          className="object-cover"
+                                          className="w-full h-full object-cover"
                                         />
                                       ) : (
                                         <div className="w-full h-full flex items-center justify-center text-lg bg-gray-200">
@@ -226,7 +253,27 @@ export default function ShelterCatsPage() {
                                   {new Date(cat.created_at).toLocaleDateString("ja-JP")}
                                 </td>
                                 <td className="px-6 py-4 text-right">
-                                  <span className="text-gray-400 text-lg group-hover:text-blue-500">›</span>
+                                  <div className="flex justify-end gap-2">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        router.push(`/shelter/cats/${cat.id}/edit`);
+                                      }}
+                                      className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                                      title="編集"
+                                    >
+                                      <Edit className="w-5 h-5" />
+                                    </button>
+                                    {isSuperUser && (
+                                      <button
+                                        onClick={(e) => handleDelete(e, cat.id, cat.name)}
+                                        className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                                        title="削除"
+                                      >
+                                        <Trash2 className="w-5 h-5" />
+                                      </button>
+                                    )}
+                                  </div>
                                 </td>
                               </tr>
                             ))}
@@ -245,11 +292,10 @@ export default function ShelterCatsPage() {
                         >
                           <div className="w-20 h-20 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0 relative">
                             {cat.primary_image ? (
-                              <Image
+                              <ImageWithFallback
                                 src={cat.primary_image}
                                 alt={cat.name}
-                                fill
-                                className="object-cover"
+                                className="w-full h-full object-cover"
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-2xl bg-gray-200">
@@ -275,8 +321,17 @@ export default function ShelterCatsPage() {
                               登録: {new Date(cat.created_at).toLocaleDateString("ja-JP")}
                             </div>
                           </div>
-                          <div className="flex items-center text-gray-300">
-                            ›
+                          <div className="flex flex-col items-center justify-between gap-2">
+                            <span className="text-gray-300">›</span>
+                            {isSuperUser && (
+                              <button
+                                onClick={(e) => handleDelete(e, cat.id, cat.name)}
+                                className="p-2 text-gray-400 hover:text-red-500 active:text-red-600 transition-colors"
+                                title="削除"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}

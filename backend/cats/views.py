@@ -52,9 +52,12 @@ class CatListCreateView(generics.ListCreateAPIView):
         queryset = Cat.objects.select_related('shelter').all()
 
         # 一般公開用一覧は、"常に" 公開設定がONのもののみ表示する
-        # シェルターユーザーであっても、トップページの一覧では公開猫のみ
-        # (自分の団体の全猫一覧は /api/cats/my_cats/ で確認する)
-        queryset = queryset.filter(is_public=True)
+        # かつ、所属する団体が公開プロフィールを有効にしており、審査が承認済みであること
+        queryset = queryset.filter(
+            is_public=True,
+            shelter__public_profile_enabled=True,
+            shelter__verification_status='approved'
+        )
         
         # 検索フィルター (キーワード検索)
         # 性格詳細、団体名、都道府県、市区町村も検索対象に含める
@@ -66,6 +69,7 @@ class CatListCreateView(generics.ListCreateAPIView):
                 Q(color__icontains=search) |
                 Q(personality__icontains=search) |
                 Q(description__icontains=search) |
+                Q(other_terms__icontains=search) |
                 Q(shelter__name__icontains=search) |
                 Q(shelter__prefecture__icontains=search) |
                 Q(shelter__city__icontains=search)
@@ -90,6 +94,21 @@ class CatListCreateView(generics.ListCreateAPIView):
         activity_level = self.request.query_params.get('activity_level', None)
         if activity_level:
             queryset = queryset.filter(activity_level=activity_level)
+
+        # フィルター: 甘えん坊度 (affection_level)
+        affection_level = self.request.query_params.get('affection_level', None)
+        if affection_level:
+            queryset = queryset.filter(affection_level=affection_level)
+
+        # フィルター: お手入れ (maintenance_level)
+        maintenance_level = self.request.query_params.get('maintenance_level', None)
+        if maintenance_level:
+            queryset = queryset.filter(maintenance_level=maintenance_level)
+
+        # フィルター: 団体ID
+        shelter_id = self.request.query_params.get('shelter_id', None)
+        if shelter_id:
+            queryset = queryset.filter(shelter_id=shelter_id)
 
         # ステータスフィルター
         cat_status = self.request.query_params.get('status', None)
@@ -143,7 +162,12 @@ class CatDetailView(generics.RetrieveUpdateDestroyAPIView):
             )
         else:
             # 一般ユーザー/未ログイン: 公開猫のみ
-            queryset = queryset.filter(is_public=True)
+            # かつ、所属団体も公開・承認済みであること
+            queryset = queryset.filter(
+                is_public=True,
+                shelter__public_profile_enabled=True,
+                shelter__verification_status='approved'
+            )
         
         return queryset
     
@@ -185,6 +209,12 @@ class CatDetailView(generics.RetrieveUpdateDestroyAPIView):
         
         if not is_member:
             raise PermissionDenied("この猫を削除する権限がありません。")
+            
+        # スタッフ権限の制限
+        if not user.is_superuser:
+            shelter_user = ShelterUser.objects.filter(user=user, shelter=instance.shelter, is_active=True).first()
+            if shelter_user and shelter_user.role == 'staff':
+                raise PermissionDenied("スタッフ権限では猫のデータを削除できません。管理者に依頼してください。")
             
         instance.delete()
 

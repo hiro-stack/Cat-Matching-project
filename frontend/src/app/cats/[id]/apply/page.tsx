@@ -30,15 +30,20 @@ const GENDER_LABELS: Record<string, string> = {
   no_answer: "回答しない",
 };
 
-const HOUSING_TYPE_LABELS: Record<string, string> = {
-  owned: "持ち家",
-  rented: "賃貸",
+const MARITAL_STATUS_LABELS: Record<string, string> = {
+  married: "既婚者",
+  single: "単身者",
 };
 
-const PET_ALLOWED_LABELS: Record<string, string> = {
-  allowed: "可（契約書あり）",
-  planned: "確認予定",
-  not_allowed: "不可",
+const INCOME_STATUS_LABELS: Record<string, string> = {
+  stable: "安定している",
+  unstable: "不安定",
+};
+
+const CAT_EXPERIENCE_LABELS: Record<string, string> = {
+  none: "なし",
+  one: "あり",
+  multiple: "複数経験あり",
 };
 
 const ABSENCE_TIME_LABELS: Record<string, string> = {
@@ -72,7 +77,6 @@ export default function ApplicationApplyPage() {
     lifelong_care_agreement: false,
     spay_neuter_agreement: false,
     medical_cost_understanding: false,
-    income_status: "stable",
     emergency_contact_available: false,
     family_consent: false,
     allergy_status: false,
@@ -204,15 +208,6 @@ export default function ApplicationApplyPage() {
                       <span className="font-bold">{user.username}</span>
                     </div>
                   </div>
-                  {user.phone_number && (
-                    <div className="flex items-center gap-3">
-                      <Phone className="w-4 h-4 text-gray-400" />
-                      <div>
-                        <span className="text-xs text-gray-500 block">電話番号</span>
-                        <span className="font-bold">{user.phone_number}</span>
-                      </div>
-                    </div>
-                  )}
                   {user.address && (
                     <div className="flex items-center gap-3">
                       <MapPin className="w-4 h-4 text-gray-400" />
@@ -231,14 +226,20 @@ export default function ApplicationApplyPage() {
                   <div>
                     <span className="text-gray-500">性別:</span> <span className="font-medium">{profile?.gender ? GENDER_LABELS[profile.gender] : "未入力"}</span>
                   </div>
-                  <div>
+                   <div>
                     <span className="text-gray-500">居住エリア:</span> <span className="font-medium">{profile?.residence_area || "未入力"}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">住宅形態:</span> <span className="font-medium">{profile?.housing_type ? HOUSING_TYPE_LABELS[profile.housing_type] : "未入力"}</span>
+                    <span className="text-gray-500">家族構成:</span> <span className="font-medium">{profile?.marital_status ? MARITAL_STATUS_LABELS[profile.marital_status] : "未入力"}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">ペット可否:</span> <span className="font-medium">{profile?.pet_allowed ? PET_ALLOWED_LABELS[profile.pet_allowed] : "未入力"}</span>
+                    <span className="text-gray-500">収入状況:</span> <span className="font-medium">{profile?.income_status ? INCOME_STATUS_LABELS[profile.income_status] : "未入力"}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">ペット飼育経験:</span> <span className="font-medium">{profile?.cat_experience ? CAT_EXPERIENCE_LABELS[profile.cat_experience] : "未入力"}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">ペット可否確認:</span> <span className="font-medium">{profile?.pet_policy_confirmed ? "確認済み" : "未確認"}</span>
                   </div>
                   <div>
                     <span className="text-gray-500">完全室内飼い:</span> <span className="font-medium">{profile?.indoors_agreement ? "同意済み" : "未回答"}</span>
@@ -286,22 +287,6 @@ export default function ApplicationApplyPage() {
                     {fieldErrors.message && <p className="text-xs text-red-500 mt-1">{fieldErrors.message[0]}</p>}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">
-                        現在の収入状況 <span className="text-red-500">*</span>
-                      </label>
-                      <select 
-                        name="income_status" 
-                        value={formData.income_status} 
-                        onChange={handleFormChange} 
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-pink-200 transition-all font-medium"
-                      >
-                        <option value="stable">安定している</option>
-                        <option value="unstable">やや不安定／変動がある</option>
-                      </select>
-                    </div>
-                  </div>
 
                   <div className="space-y-3">
                     <label className="flex items-start gap-3 cursor-pointer p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors group">
@@ -333,7 +318,19 @@ export default function ApplicationApplyPage() {
 
               {/* 3. 同意事項 */}
               <section className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-4">
-                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">里親としての誓約</h3>
+                  {cat.other_terms && (
+                    <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5 mb-4">
+                      <h4 className="text-amber-800 text-sm font-bold mb-2 flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4" />
+                        この猫固有の譲渡条件
+                      </h4>
+                      <p className="text-amber-900 text-sm whitespace-pre-wrap leading-relaxed">
+                        {cat.other_terms}
+                      </p>
+                    </div>
+                  )}
+
+                  <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">里親としての誓約</h3>
                 
                 <div className="space-y-4">
                   {[

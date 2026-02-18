@@ -178,18 +178,18 @@ class Cat(models.Model):
     
     is_single_ok = models.BooleanField(
         default=False, 
-        verbose_name='単身者応募可'
+        verbose_name='単身者応募可（非推奨）'
     )
     
     is_elderly_ok = models.BooleanField(
         default=False, 
-        verbose_name='高齢者応募可'
+        verbose_name='高齢者応募可（非推奨）'
     )
     
     other_terms = models.TextField(
         blank=True,
-        verbose_name='その他譲渡条件',
-        help_text='例: ペット可物件必須、脱走防止対策必須など'
+        verbose_name='譲渡条件',
+        help_text='例：ペット可物件必須、脱走防止対策必須、単身者・高齢者の応募可否など。詳細な条件を記載することで、ミスマッチを減らせます。'
     )
     
     ACTIVITY_LEVEL_CHOICES = [

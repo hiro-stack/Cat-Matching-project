@@ -14,11 +14,12 @@ class ApplicantProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = ApplicantProfile
         fields = [
-            'age', 'gender', 'residence_area', 'housing_type',
-            'pet_allowed', 'indoors_agreement', 'absence_time',
+            'age', 'gender', 'residence_area', 'pet_policy_confirmed',
+            'marital_status', 'income_status',
+            'indoors_agreement', 'absence_time',
             'home_frequency',
             'cat_experience', 'cat_distance', 'home_atmosphere',
-            'visitor_frequency', 'moving_plan'
+            'visitor_frequency'
         ]
 
 class UserPrivateSerializer(serializers.ModelSerializer):

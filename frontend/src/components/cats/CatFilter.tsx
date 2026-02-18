@@ -53,13 +53,31 @@ const CatFilter: FC<CatFilterProps> = ({ filters, onFilterChange, onReset }) => 
     });
   };
 
+  const handleAffectionLevelChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    onFilterChange({
+      ...filters,
+      affection_level: value ? parseInt(value, 10) : undefined,
+    });
+  };
+
+  const handleMaintenanceLevelChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    onFilterChange({
+      ...filters,
+      maintenance_level: value ? (value as CatFilters["maintenance_level"]) : undefined,
+    });
+  };
+
   const hasActiveFilters =
     filters.search ||
     filters.gender ||
     filters.status ||
     filters.age_category ||
     filters.prefecture ||
-    filters.activity_level;
+    filters.activity_level ||
+    filters.affection_level ||
+    filters.maintenance_level;
 
   const prefectures = [
     "北海道", "青森県", "岩手県", "宮城県", "秋田県", "山形県", "福島県",
@@ -147,7 +165,7 @@ const CatFilter: FC<CatFilterProps> = ({ filters, onFilterChange, onReset }) => 
         {/* Personality: Activity Level */}
         <div>
           <label htmlFor="activity_level" className="block text-sm font-medium text-[#5a5a6b] mb-2">
-            活発さ
+            活動量
           </label>
           <select
             id="activity_level"
@@ -160,6 +178,44 @@ const CatFilter: FC<CatFilterProps> = ({ filters, onFilterChange, onReset }) => 
             <option value="normal">普通</option>
             <option value="calm">おっとり</option>
             <option value="unknown">不明</option>
+          </select>
+        </div>
+
+        {/* Personality: Affection Level */}
+        <div>
+          <label htmlFor="affection_level" className="block text-sm font-medium text-[#5a5a6b] mb-2">
+            甘えん坊度
+          </label>
+          <select
+            id="affection_level"
+            value={filters.affection_level || ""}
+            onChange={handleAffectionLevelChange}
+            className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-300 text-sm bg-white"
+          >
+            <option value="">すべて</option>
+            <option value="5">5: とろとろ甘えん坊</option>
+            <option value="4">4: 甘えん坊</option>
+            <option value="3">3: ツンデレ</option>
+            <option value="2">2: クール</option>
+            <option value="1">1: 怖がり</option>
+          </select>
+        </div>
+
+        {/* Personality: Maintenance Level */}
+        <div>
+          <label htmlFor="maintenance_level" className="block text-sm font-medium text-[#5a5a6b] mb-2">
+            お手入れ
+          </label>
+          <select
+            id="maintenance_level"
+            value={filters.maintenance_level || ""}
+            onChange={handleMaintenanceLevelChange}
+            className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-300 text-sm bg-white"
+          >
+            <option value="">すべて</option>
+            <option value="easy">初心者でも安心 (楽々)</option>
+            <option value="normal">少しコツが必要 (普通)</option>
+            <option value="hard">経験者向き (練習中)</option>
           </select>
         </div>
 

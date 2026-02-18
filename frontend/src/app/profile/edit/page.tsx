@@ -18,8 +18,9 @@ export default function ProfileEditPage() {
     age: null,
     gender: null,
     residence_area: "",
-    housing_type: null,
-    pet_allowed: null,
+    marital_status: null,
+    income_status: null,
+    pet_policy_confirmed: false,
     indoors_agreement: false,
     absence_time: null,
     home_frequency: null,
@@ -27,7 +28,6 @@ export default function ProfileEditPage() {
     cat_distance: null,
     home_atmosphere: null,
     visitor_frequency: null,
-    moving_plan: null,
   });
 
   useEffect(() => {
@@ -70,8 +70,28 @@ export default function ProfileEditPage() {
       setIsSaving(false);
       return;
     }
+    if (!profile.pet_policy_confirmed) {
+      setError("住居のペット可否状況の確認は必須です。");
+      setIsSaving(false);
+      return;
+    }
+    if (!profile.marital_status) {
+      setError("家族構成（既婚/単身）を選択してください。");
+      setIsSaving(false);
+      return;
+    }
+    if (!profile.income_status) {
+      setError("収入状況を選択してください。");
+      setIsSaving(false);
+      return;
+    }
     if (!profile.age) {
         setError("年齢を入力してください。");
+        setIsSaving(false);
+        return;
+    }
+    if (!profile.cat_experience) {
+        setError("猫の飼育経験を選択してください。");
         setIsSaving(false);
         return;
     }
@@ -166,7 +186,7 @@ export default function ProfileEditPage() {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">居住エリア（都道府県 / 市区町村） <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">居住エリア（都道府県のみ） <span className="text-red-500">*</span></label>
                     <input
                       required
                       type="text"
@@ -174,42 +194,43 @@ export default function ProfileEditPage() {
                       value={profile.residence_area || ""}
                       onChange={handleChange}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-pink-100 outline-none"
-                      placeholder="例：東京都渋谷区"
+                      placeholder="例：東京都"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">住宅形態</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">家族構成 <span className="text-red-500">*</span></label>
                     <select
-                      name="housing_type"
-                      value={profile.housing_type || ""}
+                      required
+                      name="marital_status"
+                      value={profile.marital_status || ""}
                       onChange={handleChange}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-pink-100 outline-none"
                     >
                       <option value="">選択してください</option>
-                      <option value="owned">持ち家</option>
-                      <option value="rented">賃貸</option>
+                      <option value="married">既婚者</option>
+                      <option value="single">単身者</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">ペット可否</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">収入状況 <span className="text-red-500">*</span></label>
                     <select
-                      name="pet_allowed"
-                      value={profile.pet_allowed || ""}
+                      required
+                      name="income_status"
+                      value={profile.income_status || ""}
                       onChange={handleChange}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-pink-100 outline-none"
                     >
                       <option value="">選択してください</option>
-                      <option value="allowed">可（契約書あり）</option>
-                      <option value="planned">確認予定</option>
-                      <option value="not_allowed">不可</option>
+                      <option value="stable">安定している</option>
+                      <option value="unstable">不安定</option>
                     </select>
                   </div>
                 </div>
 
-                <div className="mt-4">
-                  <label className="flex items-center gap-2 cursor-pointer p-4 bg-pink-50 rounded-xl border border-pink-100">
+                <div className="mt-6 space-y-3">
+                  <label className="flex items-center gap-3 cursor-pointer p-4 bg-pink-50 rounded-xl border border-pink-100 hover:bg-pink-100/50 transition-colors">
                     <input
                       type="checkbox"
                       name="indoors_agreement"
@@ -217,7 +238,18 @@ export default function ProfileEditPage() {
                       onChange={handleChange}
                       className="w-5 h-5 text-pink-500 rounded focus:ring-pink-500"
                     />
-                    <span className="text-gray-800 font-medium">完全室内飼いに同意します（必須）</span>
+                    <span className="text-gray-800 font-bold">完全室内飼いに同意します <span className="text-red-500 text-xs ml-1">(必須)</span></span>
+                  </label>
+
+                  <label className="flex items-center gap-3 cursor-pointer p-4 bg-pink-50 rounded-xl border border-pink-100 hover:bg-pink-100/50 transition-colors">
+                    <input
+                      type="checkbox"
+                      name="pet_policy_confirmed"
+                      checked={profile.pet_policy_confirmed || false}
+                      onChange={handleChange}
+                      className="w-5 h-5 text-pink-500 rounded focus:ring-pink-500"
+                    />
+                    <span className="text-gray-800 font-bold">住居のペット可否について確認しました <span className="text-red-500 text-xs ml-1">(必須)</span></span>
                   </label>
                 </div>
               </section>
@@ -267,8 +299,9 @@ export default function ProfileEditPage() {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">猫の飼育経験</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">ペットの飼育経験 <span className="text-red-500">*</span></label>
                     <select
+                      required
                       name="cat_experience"
                       value={profile.cat_experience || ""}
                       onChange={handleChange}
@@ -323,21 +356,6 @@ export default function ProfileEditPage() {
                       <option value="high">多い</option>
                       <option value="medium">普通</option>
                       <option value="low">少ない</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">引っ越し予定</label>
-                    <select
-                      name="moving_plan"
-                      value={profile.moving_plan || ""}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-pink-100 outline-none"
-                    >
-                      <option value="">選択してください</option>
-                      <option value="none">なし</option>
-                      <option value="within_1_2_years">1–2年以内</option>
-                      <option value="undecided">未定</option>
                     </select>
                   </div>
                 </div>

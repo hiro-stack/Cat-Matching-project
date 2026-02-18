@@ -16,6 +16,9 @@ interface Stats {
   adoptedCats: number;
   totalApplications: number;
   pendingApplications: number;
+  reviewingApplications: number; // 審査中
+  trialApplications: number;     // トライアル
+  activeUsers: number;           // 対応中の実ユーザー数
 }
 
 interface Application {
@@ -33,6 +36,9 @@ export default function ShelterDashboardPage() {
     adoptedCats: 0,
     totalApplications: 0,
     pendingApplications: 0,
+    reviewingApplications: 0,
+    trialApplications: 0,
+    activeUsers: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -79,12 +85,18 @@ export default function ShelterDashboardPage() {
             };
           }
 
-          let appStats = { total: 0, pending: 0 };
+          let appStats = { total: 0, pending: 0, reviewing: 0, trial: 0, activeUsers: 0 };
           if (appsResult.status === 'fulfilled') {
             const apps = appsResult.value.data.results || appsResult.value.data;
+            const activeApps = apps.filter((a: any) => ["reviewing", "trial"].includes(a.status));
+            const uniqueUserIds = new Set(activeApps.map((a: any) => a.applicant_info?.id || a.applicant));
+
             appStats = {
               total: appsResult.value.data.count || apps.length,
               pending: apps.filter((a: any) => a.status === "pending").length,
+              reviewing: apps.filter((a: any) => a.status === "reviewing").length,
+              trial: apps.filter((a: any) => a.status === "trial").length,
+              activeUsers: uniqueUserIds.size,
             };
           }
 
@@ -95,6 +107,9 @@ export default function ShelterDashboardPage() {
             adoptedCats: catStats.adopted,
             totalApplications: appStats.total,
             pendingApplications: appStats.pending,
+            reviewingApplications: appStats.reviewing,
+            trialApplications: appStats.trial,
+            activeUsers: appStats.activeUsers,
           });
         } catch (statsError) {
           console.error("Stats calculation failed:", statsError);
@@ -143,32 +158,31 @@ export default function ShelterDashboardPage() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
                 <div className="flex flex-wrap items-center gap-3 mb-2">
-                  <h1 className="text-xl sm:text-2xl font-bold">
+                  <h1 className="text-xl sm:text-3xl font-bold">
                     ようこそ、{user?.username}さん！
                   </h1>
                   {isAdmin ? (
-                    <span className="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wide">管理者</span>
+                    <span className="bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide shadow-sm">管理者</span>
                   ) : (
-                    <span className="bg-blue-400 text-blue-900 text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wide">スタッフ</span>
+                    <span className="bg-blue-400 text-blue-900 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide shadow-sm">スタッフ</span>
                   )}
                 </div>
-                <p className="text-blue-100 text-sm sm:text-base">
-                  保護団体ダッシュボードへようこそ。
+                <p className="text-blue-100 text-sm sm:text-lg opacity-90">
                   {isAdmin 
-                    ? "ここから猫の登録や申請の管理（管理者機能）ができます。" 
-                    : "登録済みの猫の情報の管理を行えます。"}
+                    ? "本日の活動状況をチェックしましょう。" 
+                    : "担当している猫の状況を確認しましょう。"}
                 </p>
               </div>
               <button
                 onClick={handleLogout}
-                className="w-full sm:w-auto px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-white font-medium transition-colors text-center"
+                className="w-full sm:w-auto px-6 py-2.5 bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/20 rounded-xl text-white font-bold transition-all text-center shadow-sm"
               >
                 ログアウト
               </button>
             </div>
           </div>
 
-          {/* 審査ステータスバナー */}
+          {/* 審査ステータスバナー (省略) */}
           {user?.shelter_info && user.shelter_info.verification_status !== 'approved' && (
             <div className={`mb-8 p-6 rounded-2xl border ${
               user.shelter_info.verification_status === 'pending'
@@ -210,111 +224,143 @@ export default function ShelterDashboardPage() {
                         </Link>
                       </div>
                     )}
-                    {user.shelter_info.verification_status === 'rejected' && (
-                      <p>恐れ入りますが、ご登録の内容では承認することができませんでした。詳細はメールまたは運営までお問い合わせください。</p>
-                    )}
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* クイックアクション */}
-          <div className={`grid grid-cols-1 md:grid-cols-2 ${isAdmin ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-6 mb-8`}>
-            {isAdmin && (
-              <Link
-                href="/shelter/cats/new"
-                className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all group"
-              >
-                <div className="text-3xl mb-3 group-hover:scale-110 transition-transform">🐱</div>
-                <h3 className="font-semibold text-gray-800 mb-1">新しい猫を登録</h3>
-                <p className="text-sm text-gray-500">保護猫の情報を追加</p>
+          {/* 統計カードセクション */}
+          <div className="mb-10">
+            <h2 className="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2">
+              <span className="w-1.5 h-5 bg-blue-500 rounded-full"></span>
+              現在の活動ステータス
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              
+              {/* 猫の管理カード */}
+              <Link href="/shelter/cats" className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all group overflow-hidden relative">
+                <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-50 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out opacity-50"></div>
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-gray-500 font-bold text-sm">登録中の猫</span>
+                    <span className="p-2 bg-blue-50 text-blue-500 rounded-xl group-hover:bg-blue-500 group-hover:text-white transition-colors text-xl">🐱</span>
+                  </div>
+                  <div className="text-4xl font-black text-gray-900 mb-2">{stats.totalCats}</div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-400">募集中の子</span>
+                      <span className="text-green-600 font-bold">{stats.openCats}匹</span>
+                    </div>
+                    <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+                       <div className="bg-green-500 h-full transition-all duration-1000" style={{ width: stats.totalCats > 0 ? `${(stats.openCats / stats.totalCats) * 100}%` : '0%' }}></div>
+                    </div>
+                  </div>
+                </div>
               </Link>
-            )}
 
-            <Link
-              href="/shelter/cats"
-              className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all group"
-            >
-              <div className="text-3xl mb-3 group-hover:scale-110 transition-transform">📋</div>
-              <h3 className="font-semibold text-gray-800 mb-1">猫の管理</h3>
-              <p className="text-sm text-gray-500">登録済みの猫を管理</p>
-            </Link>
-
-            {isAdmin && (
-              <Link
-                href="/shelter/applications"
-                className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all group relative"
-              >
-                <div className="text-3xl mb-3 group-hover:scale-110 transition-transform">📨</div>
-                <h3 className="font-semibold text-gray-800 mb-1">申請一覧</h3>
-                <p className="text-sm text-gray-500">里親申請を確認</p>
-                {stats.pendingApplications > 0 && (
-                  <span className="absolute top-4 right-4 px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
-                    {stats.pendingApplications}
-                  </span>
-                )}
+              {/* 里親申請（未対応）カード */}
+              <Link href="/shelter/applications?status=pending" className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all group overflow-hidden relative">
+                <div className="absolute -right-4 -top-4 w-24 h-24 bg-orange-50 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out opacity-50"></div>
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-gray-500 font-bold text-sm">新着の里親申請</span>
+                    <span className="p-2 bg-orange-50 text-orange-500 rounded-xl group-hover:bg-orange-500 group-hover:text-white transition-colors text-xl">📨</span>
+                  </div>
+                  <div className="text-4xl font-black text-gray-900 mb-2">{stats.pendingApplications}</div>
+                  <div className="text-xs text-orange-500 font-bold flex items-center gap-1">
+                    <span className="animate-pulse w-2 h-2 bg-orange-500 rounded-full"></span>
+                    未確認の申請があります
+                  </div>
+                </div>
               </Link>
-            )}
 
-            <Link
-              href="/shelter/profile"
-              className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all group"
-            >
-              <div className="text-3xl mb-3 group-hover:scale-110 transition-transform">🏢</div>
-              <h3 className="font-semibold text-gray-800 mb-1">団体プロフィール</h3>
-              <p className="text-sm text-gray-500">
-                {isAdmin ? "団体の情報を編集・管理" : "団体の情報を確認"}
-              </p>
-            </Link>
-
-            {isAdmin && (
-              <Link
-                href="/shelter/staff"
-                className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all group"
-              >
-                <div className="text-3xl mb-3 group-hover:scale-110 transition-transform">👥</div>
-                <h3 className="font-semibold text-gray-800 mb-1">スタッフ管理</h3>
-                <p className="text-sm text-gray-500">メンバーの権限設定・削除</p>
+              {/* 対応中（チャット中）カード */}
+              <Link href="/shelter/applications?status=active" className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all group overflow-hidden relative">
+                <div className="absolute -right-4 -top-4 w-24 h-24 bg-indigo-50 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out opacity-50"></div>
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-gray-500 font-bold text-sm">チャット/対応中</span>
+                    <span className="p-2 bg-indigo-50 text-indigo-500 rounded-xl group-hover:bg-indigo-500 group-hover:text-white transition-colors text-xl">💬</span>
+                  </div>
+                  <div className="text-4xl font-black text-gray-900 mb-2">{stats.activeUsers}</div>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[10px] font-bold">審査中: {stats.reviewingApplications}件</span>
+                    <span className="px-2 py-0.5 bg-purple-50 text-purple-600 rounded text-[10px] font-bold">トライアル: {stats.trialApplications}件</span>
+                  </div>
+                </div>
               </Link>
-            )}
+
+              {/* 譲渡完了カード */}
+              <Link href="/shelter/cats?status=adopted" className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all group overflow-hidden relative">
+                <div className="absolute -right-4 -top-4 w-24 h-24 bg-green-50 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out opacity-50"></div>
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-gray-500 font-bold text-sm">譲渡完了実績</span>
+                    <span className="p-2 bg-green-50 text-green-500 rounded-xl group-hover:bg-green-500 group-hover:text-white transition-colors text-xl">🏠</span>
+                  </div>
+                  <div className="text-4xl font-black text-gray-900 mb-2">{stats.adoptedCats}</div>
+                  <div className="text-xs text-gray-400 font-medium">これまでに繋がったご縁</div>
+                </div>
+              </Link>
+            </div>
           </div>
 
-          {/* 統計カード */}
-          <div className={`grid grid-cols-1 ${isAdmin ? 'md:grid-cols-3' : 'md:grid-cols-1'} gap-6 mb-8`}>
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-gray-500 text-sm">登録中の猫</span>
-                <span className="text-2xl">🐱</span>
-              </div>
-              <div className="text-3xl font-bold text-gray-800">{stats.totalCats}</div>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm">
-                <span className="text-green-500 font-medium">募集中: {stats.openCats}匹</span>
-                <span className="text-purple-500 font-medium">トライアル: {stats.trialCats}匹</span>
-              </div>
+          {/* クイックツールセクション */}
+          <div className="mb-10">
+            <h2 className="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2 px-1">
+              <span className="w-1.5 h-5 bg-indigo-500 rounded-full"></span>
+              管理ツール
+            </h2>
+            <div className={`grid grid-cols-1 sm:grid-cols-2 ${isAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-2'} gap-4`}>
+              {isAdmin && (
+                <Link
+                  href="/shelter/cats/new"
+                  className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:bg-indigo-50 hover:border-indigo-200 transition-all flex items-center gap-4 group"
+                >
+                  <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform flex-shrink-0">✨</div>
+                  <div>
+                    <h3 className="font-bold text-gray-800 text-sm">新しい猫を登録</h3>
+                    <p className="text-[10px] text-gray-500">里親募集ページを作成</p>
+                  </div>
+                </Link>
+              )}
+
+              <Link
+                href="/shelter/cats"
+                className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:bg-emerald-50 hover:border-emerald-200 transition-all flex items-center gap-4 group"
+              >
+                <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform flex-shrink-0">📋</div>
+                <div>
+                  <h3 className="font-bold text-gray-800 text-sm">猫の一覧・管理</h3>
+                  <p className="text-[10px] text-gray-500">情報の編集や募集停止</p>
+                </div>
+              </Link>
+              
+              <Link
+                href="/shelter/profile"
+                className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:bg-pink-50 hover:border-pink-200 transition-all flex items-center gap-4 group"
+              >
+                <div className="w-12 h-12 bg-pink-100 rounded-xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform flex-shrink-0">🏢</div>
+                <div>
+                  <h3 className="font-bold text-gray-800 text-sm">団体プロフィール</h3>
+                  <p className="text-[10px] text-gray-500">公開情報やロゴの管理</p>
+                </div>
+              </Link>
+
+              {isAdmin && (
+                <Link
+                  href="/shelter/staff"
+                  className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:bg-blue-50 hover:border-blue-200 transition-all flex items-center gap-4 group"
+                >
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform flex-shrink-0">👥</div>
+                  <div>
+                    <h3 className="font-bold text-gray-800 text-sm">スタッフ管理</h3>
+                    <p className="text-[10px] text-gray-500">権限設定・メンバー管理</p>
+                  </div>
+                </Link>
+              )}
             </div>
-
-            {isAdmin && (
-              <>
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-gray-500 text-sm">里親申請</span>
-                    <span className="text-2xl">📨</span>
-                  </div>
-                  <div className="text-3xl font-bold text-gray-800">{stats.totalApplications}</div>
-                  <p className="text-sm text-orange-500 mt-1">未確認: {stats.pendingApplications}件</p>
-                </div>
-
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-gray-500 text-sm">譲渡完了</span>
-                    <span className="text-2xl">🏠</span>
-                  </div>
-                  <div className="text-3xl font-bold text-gray-800">{stats.adoptedCats}</div>
-                  <p className="text-sm text-gray-400 mt-1">これまでの実績</p>
-                </div>
-              </>
-            )}
           </div>
 
           {/* お知らせ (管理人のみ) */}

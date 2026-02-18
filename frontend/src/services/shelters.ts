@@ -1,24 +1,5 @@
 import api from "@/lib/api";
-
-export interface ShelterPublic {
-  id: number;
-  name: string;
-  shelter_type: string;
-  prefecture: string;
-  city: string;
-  logo_image: string | null;
-  header_image: string | null;
-  description: string;
-  website_url: string;
-  sns_url: string;
-  rescue_accepting: boolean;
-  rescue_area_text: string;
-  rescue_notes: string;
-  support_goods_url: string;
-  support_donation_url: string;
-  support_message: string;
-  created_at: string;
-}
+import { ShelterPublic } from "@/types";
 
 export const sheltersService = {
   // 一般公開用プロフィール取得

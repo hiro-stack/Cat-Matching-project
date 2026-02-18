@@ -19,8 +19,9 @@ export interface ApplicantProfile {
   age?: number | null;
   gender?: 'male' | 'female' | 'other' | 'no_answer' | null;
   residence_area?: string | null;
-  housing_type?: 'owned' | 'rented' | null;
-  pet_allowed?: 'allowed' | 'planned' | 'not_allowed' | null;
+  pet_policy_confirmed?: boolean;
+  marital_status?: 'married' | 'single' | null;
+  income_status?: 'stable' | 'unstable' | null;
   indoors_agreement?: boolean;
   absence_time?: 'less_than_4' | '4_to_8' | '8_to_12' | 'more_than_12' | null;
   home_frequency?: 'high' | 'medium' | 'low' | null;
@@ -29,7 +30,6 @@ export interface ApplicantProfile {
   cat_distance?: 'clingy' | 'moderate' | 'watchful' | null;
   home_atmosphere?: 'quiet' | 'normal' | 'lively' | null;
   visitor_frequency?: 'high' | 'medium' | 'low' | null;
-  moving_plan?: 'none' | 'within_1_2_years' | 'undecided' | null;
 }
 
 export interface User {
@@ -159,6 +159,9 @@ export interface CatFilters {
   age_category?: 'kitten' | 'adult' | 'senior' | 'unknown';
   prefecture?: string;
   activity_level?: 'active' | 'normal' | 'calm' | 'unknown';
+  affection_level?: number;
+  maintenance_level?: 'easy' | 'normal' | 'hard';
+  shelter_id?: number;
   page?: number;
 }
 
@@ -203,4 +206,30 @@ export interface ShelterMember {
   role: 'admin' | 'staff';
   is_active: boolean;
   joined_at: string;
+}
+
+export interface ShelterPublic {
+  id: number;
+  name: string;
+  shelter_type: string;
+  prefecture: string;
+  city: string;
+  address?: string;
+  postcode?: string;
+  email?: string;
+  logo_image: string | null;
+  header_image: string | null;
+  description: string;
+  website_url?: string;
+  sns_url?: string;
+  business_hours?: string;
+  transfer_available_hours?: string;
+  rescue_accepting: boolean;
+  rescue_area_text?: string;
+  rescue_notes?: string;
+  support_goods_url?: string;
+  support_donation_url?: string;
+  support_message?: string;
+  verification_status: string;
+  created_at: string;
 }

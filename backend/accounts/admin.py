@@ -24,8 +24,8 @@ class UserAdmin(BaseUserAdmin):
 @admin.register(ApplicantProfile)
 class ApplicantProfileAdmin(admin.ModelAdmin):
     """プロフィール単独管理画面"""
-    list_display = ['user', 'age', 'gender', 'residence_area', 'has_indoors_agreement']
-    list_filter = ['gender', 'housing_type', 'pet_allowed']
+    list_display = ['user', 'age', 'gender', 'residence_area', 'marital_status', 'has_indoors_agreement']
+    list_filter = ['gender', 'marital_status', 'income_status', 'pet_policy_confirmed']
     search_fields = ['user__username', 'user__email', 'residence_area']
     
     def has_indoors_agreement(self, obj):

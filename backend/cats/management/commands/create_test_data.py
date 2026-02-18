@@ -151,10 +151,14 @@ class Command(BaseCommand):
                         'address': '〇〇1-2-3',
                         'description': shelter_data['description'],
                         'verification_status': shelter_data['verification_status'],
+                        'public_profile_enabled': True,
                         'business_hours': shelter_data.get('business_hours', ''),
                         'transfer_available_hours': shelter_data.get('transfer_available_hours', ''),
                     }
                 )
+                if not created:
+                    shelter.public_profile_enabled = True
+                    shelter.save()
                 shelters.append(shelter)
 
                 # Link user to shelter as admin
@@ -214,6 +218,8 @@ class Command(BaseCommand):
                     'senior': ['7歳くらい', '8〜10歳', '10歳以上']
                 }
 
+                is_single_ok = random.choice([True, False])
+                is_elderly_ok = random.choice([True, False])
                 cat = Cat.objects.create(
                     name=name,
                     shelter=shelter,
@@ -241,9 +247,9 @@ class Command(BaseCommand):
                     trial_period='2週間',
                     transfer_fee=random.choice([0, 10000, 15000, 20000]),
                     fee_details='ワクチン接種費用として',
-                    is_single_ok=random.choice([True, False]),
-                    is_elderly_ok=random.choice([True, False]),
-                    other_terms='ペット可物件必須、脱走防止対策必須、ご家族全員の同意など',
+                    is_single_ok=is_single_ok,
+                    is_elderly_ok=is_elderly_ok,
+                    other_terms=f"{'単身者応募可、' if is_single_ok else ''}{'高齢者応募可、' if is_elderly_ok else ''}ペット可物件必須、脱走防止対策必須、ご家族全員の同意など",
 
                     description=f'{name}は{shelter.name}で保護された猫です。新しい家族を探しています。',
                     status='open',

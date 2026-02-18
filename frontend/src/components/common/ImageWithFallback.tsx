@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getImageUrl } from '@/utils/image';
 
 // A simple SVG placeholder of a cat info icon/paw in gray
 const CAT_ERROR_SVG = `
@@ -22,20 +23,22 @@ interface ImageWithFallbackProps extends React.ImgHTMLAttributes<HTMLImageElemen
 }
 
 export function ImageWithFallback(props: ImageWithFallbackProps) {
-  const { src, alt, style, className,  fallbackSrc = ERROR_IMG_SRC, ...rest } = props;
-  const [imgSrc, setImgSrc] = useState<string | undefined>(src);
-  const [hasError, setHasError] = useState(false);
+  const { src, alt, style, className, fallbackSrc = ERROR_IMG_SRC, ...rest } = props;
+  const [imgSrc, setImgSrc] = useState<string>(getImageUrl(src, fallbackSrc));
+
+  useEffect(() => {
+    setImgSrc(getImageUrl(src, fallbackSrc));
+  }, [src, fallbackSrc]);
 
   const handleError = () => {
-    if (!hasError) {
-      setHasError(true);
-      setImgSrc(fallbackSrc);
+    if (imgSrc !== getImageUrl(fallbackSrc)) {
+      setImgSrc(getImageUrl(fallbackSrc));
     }
   };
 
   return (
     <img
-      src={hasError ? fallbackSrc : imgSrc}
+      src={imgSrc}
       alt={alt}
       className={className}
       style={style}

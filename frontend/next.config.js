@@ -17,6 +17,10 @@ const nextConfig = {
         source: '/django-admin',
         destination: 'http://backend:8000/django-admin/',
       },
+      {
+        source: '/media/:path*',
+        destination: 'http://backend:8000/media/:path*',
+      },
     ]
   },
 }

@@ -719,45 +719,10 @@ export default function NewCatPage() {
                         </div>
                     </div>
 
-                    {/* 譲渡条件フラグ */}
-                    <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-                        <label className={`flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl transition-all ${!isSuperUser ? 'bg-gray-50 cursor-not-allowed border-gray-100' : 'cursor-pointer hover:bg-gray-50'}`}>
-                            <input
-                                type="checkbox"
-                                name="is_single_ok"
-                                checked={formData.is_single_ok}
-                                onChange={handleChange}
-                                disabled={!isSuperUser}
-                                className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
-                            />
-                            <div>
-                                <span className={`block text-sm font-bold ${!isSuperUser ? 'text-gray-400' : 'text-gray-800'}`}>単身者応募可</span>
-                                <span className="block text-xs text-gray-400">一人暮らしの方でも応募可能です</span>
-                            </div>
-                            {!isSuperUser && <Lock className="w-3.5 h-3.5 text-gray-300 ml-auto" />}
-                        </label>
-
-                        <label className={`flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl transition-all ${!isSuperUser ? 'bg-gray-50 cursor-not-allowed border-gray-100' : 'cursor-pointer hover:bg-gray-50'}`}>
-                            <input
-                                type="checkbox"
-                                name="is_elderly_ok"
-                                checked={formData.is_elderly_ok}
-                                onChange={handleChange}
-                                disabled={!isSuperUser}
-                                className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
-                            />
-                            <div>
-                                <span className={`block text-sm font-bold ${!isSuperUser ? 'text-gray-400' : 'text-gray-800'}`}>高齢者応募可</span>
-                                <span className="block text-xs text-gray-400">60歳以上の方でも応募可能です</span>
-                            </div>
-                            {!isSuperUser && <Lock className="w-3.5 h-3.5 text-gray-300 ml-auto" />}
-                        </label>
-                    </div>
-
-                    {/* その他譲渡条件 */}
+                    {/* 譲渡条件 */}
                     <div className="md:col-span-2">
                          <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-2">
-                            その他譲渡条件
+                            譲渡条件
                             {!isSuperUser && <Lock className="w-3.5 h-3.5 text-gray-300" />}
                         </label>
                         <div className="relative">
@@ -765,16 +730,15 @@ export default function NewCatPage() {
                                 name="other_terms"
                                 value={formData.other_terms}
                                 onChange={handleChange}
-                                rows={3}
+                                rows={6}
                                 disabled={!isSuperUser}
                                 className={`w-full px-4 py-3 rounded-xl border border-gray-200 outline-none resize-none transition-all ${!isSuperUser ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-100 pl-10' : ''}`}
-                                placeholder="例：ペット可物件必須、脱走防止対策必須など"
+                                placeholder="例：単身者可、高齢者可、ペット可物件必須、脱走防止対策必須など。詳細な条件を記載することで、ミスマッチを減らせます。"
                             />
                             {!isSuperUser && (
                                 <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-4" />
                             )}
                         </div>
-                        <p className="mt-1 text-xs text-gray-400">※詳細な条件を記載することで、ミスマッチを減らせます</p>
                     </div>
                      {/* 譲渡費用 */}
                      <div>

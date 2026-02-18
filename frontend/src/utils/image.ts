@@ -67,3 +67,19 @@ export const compressImage = async (file: File): Promise<File> => {
     reader.readAsDataURL(file);
   });
 };
+
+/**
+ * Gets the full image URL.
+ * If the path is relative, prepends the backend API URL.
+ */
+export const getImageUrl = (path: string | null | undefined, fallback: string = ""): string => {
+  if (!path) return fallback;
+  if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) {
+    return path;
+  }
+  
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  // Ensure no double slashes
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  return `${baseUrl}${cleanPath}`;
+};

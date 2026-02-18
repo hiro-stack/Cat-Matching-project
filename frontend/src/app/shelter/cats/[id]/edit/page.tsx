@@ -928,50 +928,19 @@ function EditCatForm({ params }: { params: { id: string } }) {
                     </div>
                 </div>
 
-                {/* 譲渡条件フラグ */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                    <label className={`flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl transition-colors ${!isSuperUser ? 'cursor-not-allowed opacity-70 bg-gray-50' : 'cursor-pointer hover:bg-gray-50'}`}>
-                        <input
-                            type="checkbox"
-                            name="is_single_ok"
-                            checked={formData.is_single_ok}
-                            onChange={handleChange}
-                            disabled={!isSuperUser}
-                            className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <div>
-                            <span className="block text-sm font-bold text-gray-800">単身者応募可</span>
-                        </div>
-                    </label>
-
-                    <label className={`flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl transition-colors ${!isSuperUser ? 'cursor-not-allowed opacity-70 bg-gray-50' : 'cursor-pointer hover:bg-gray-50'}`}>
-                        <input
-                            type="checkbox"
-                            name="is_elderly_ok"
-                            checked={formData.is_elderly_ok}
-                            onChange={handleChange}
-                            disabled={!isSuperUser}
-                            className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <div>
-                            <span className="block text-sm font-bold text-gray-800">高齢者応募可</span>
-                        </div>
-                    </label>
-                </div>
-
-                {/* その他譲渡条件 */}
+                {/* 譲渡条件 */}
                  <div className="mb-4">
                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                        その他譲渡条件
+                        譲渡条件
                     </label>
                     <textarea
                         name="other_terms"
                         value={formData.other_terms}
                         onChange={handleChange}
-                        rows={2}
+                        rows={6}
                         disabled={!isSuperUser}
                         className={`w-full px-4 py-3 rounded-xl border border-gray-200 outline-none resize-none transition-all ${!isSuperUser ? 'bg-gray-50 text-gray-500 cursor-not-allowed border-gray-100' : ''}`}
-                        placeholder="例：ペット可物件必須、脱走防止対策必須など"
+                        placeholder="例：単身者可、高齢者可、ペット可物件必須、脱走防止対策必須など。詳細な条件を記載することで、ミスマッチを減らせます。"
                     />
                 </div>
                 {/* 費用詳細 */}

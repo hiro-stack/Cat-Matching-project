@@ -24,11 +24,12 @@ class ShelterPublicSerializer(serializers.ModelSerializer):
         model = Shelter
         fields = [
             'id', 'name', 'shelter_type', 'prefecture', 'city',
-            'logo_image', 'header_image', 'description',
+            'address', 'postcode', 'email', 'logo_image', 'header_image', 'description',
             'website_url', 'sns_url',
+            'business_hours', 'transfer_available_hours',
             'rescue_accepting', 'rescue_area_text', 'rescue_notes',
             'support_goods_url', 'support_donation_url', 'support_message',
-            'created_at'
+            'verification_status', 'created_at'
         ]
         read_only_fields = fields
 

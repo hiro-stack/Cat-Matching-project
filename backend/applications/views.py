@@ -321,6 +321,16 @@ class MessageViewSet(viewsets.ModelViewSet):
         if not (is_applicant or is_shelter_member):
              raise permissions.PermissionDenied("この応募にメッセージを送信する権限がありません。")
         
+        # スタッフ権限の制限: チャットは閲覧のみ可能
+        if is_shelter_member and not user.is_superuser:
+            shelter_user = ShelterUser.objects.filter(
+                user=user,
+                shelter_id=application.shelter_id,
+                is_active=True
+            ).first()
+            if shelter_user and shelter_user.role == 'staff':
+                raise PermissionDenied("スタッフ権限ではメッセージを送信できません。")
+        
         # 送信者種別を判定して保存 (Admin > Shelter > User)
         sender_type = 'user'
         if user.user_type == 'admin': # Admin優先

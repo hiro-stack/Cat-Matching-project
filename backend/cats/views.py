@@ -85,10 +85,20 @@ class CatListCreateView(generics.ListCreateAPIView):
         if age_category:
             queryset = queryset.filter(age_category=age_category)
 
-        # フィルター: 都道府県 (shelter__prefecture) - dropdown用
-        prefecture = self.request.query_params.get('prefecture', None)
-        if prefecture:
-            queryset = queryset.filter(shelter__prefecture__icontains=prefecture)
+        # フィルター: 都道府県 (shelter__prefecture) - 複数選択対応
+        prefectures = self.request.query_params.getlist('prefecture')
+        if prefectures:
+            # カンマ区切り（frontendから single string で送られた場合）も考慮
+            actual_prefectures = []
+            for p in prefectures:
+                if p:
+                    actual_prefectures.extend(p.split(','))
+            
+            # 重複除去と空文字除去
+            actual_prefectures = list(set([p for p in actual_prefectures if p]))
+            
+            if actual_prefectures:
+                queryset = queryset.filter(shelter__prefecture__in=actual_prefectures)
 
         # フィルター: 性格区分 (activity_level)
         activity_level = self.request.query_params.get('activity_level', None)

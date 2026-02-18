@@ -160,7 +160,7 @@ export interface CatFilters {
   gender?: Gender;
   status?: CatStatus;
   age_category?: 'kitten' | 'adult' | 'senior' | 'unknown';
-  prefecture?: string;
+  prefecture?: string | string[];
   activity_level?: 'active' | 'normal' | 'calm' | 'unknown';
   affection_level?: number;
   maintenance_level?: 'easy' | 'normal' | 'hard';

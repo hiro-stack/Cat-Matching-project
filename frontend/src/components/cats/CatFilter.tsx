@@ -45,19 +45,32 @@ const CatFilter: FC<CatFilterProps> = ({ filters, onFilterChange, onReset }) => 
     });
   };
 
-  const handlePrefectureChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    onFilterChange({
-      ...filters,
-      prefecture: value || undefined,
-    });
-  };
 
   const handleAffectionLevelChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     onFilterChange({
       ...filters,
       affection_level: value ? parseInt(value, 10) : undefined,
+    });
+  };
+
+  const handlePrefectureChange = (pref: string) => {
+    const currentPrefs = Array.isArray(filters.prefecture) 
+      ? filters.prefecture 
+      : (typeof filters.prefecture === 'string' && filters.prefecture)
+        ? [filters.prefecture] 
+        : [];
+    
+    let newPrefs: string[];
+    if (currentPrefs.includes(pref)) {
+      newPrefs = currentPrefs.filter(p => p !== pref);
+    } else {
+      newPrefs = [...currentPrefs, pref];
+    }
+    
+    onFilterChange({
+      ...filters,
+      prefecture: newPrefs.length > 0 ? newPrefs : undefined,
     });
   };
 
@@ -74,7 +87,7 @@ const CatFilter: FC<CatFilterProps> = ({ filters, onFilterChange, onReset }) => 
     filters.gender ||
     filters.status ||
     filters.age_category ||
-    filters.prefecture ||
+    (Array.isArray(filters.prefecture) ? filters.prefecture.length > 0 : filters.prefecture) ||
     filters.activity_level ||
     filters.affection_level ||
     filters.maintenance_level;
@@ -127,20 +140,38 @@ const CatFilter: FC<CatFilterProps> = ({ filters, onFilterChange, onReset }) => 
 
         {/* Prefecture */}
         <div>
-          <label htmlFor="prefecture" className="block text-sm font-medium text-[#5a5a6b] mb-2">
+          <label className="block text-sm font-medium text-[#5a5a6b] mb-3">
             エリア（都道府県）
           </label>
-          <select
-            id="prefecture"
-            value={filters.prefecture || ""}
-            onChange={handlePrefectureChange}
-            className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-300 text-sm bg-white"
-          >
-            <option value="">すべて</option>
-            {prefectures.map((pref) => (
-              <option key={pref} value={pref}>{pref}</option>
-            ))}
-          </select>
+          <div className="space-y-2 max-h-48 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-pink-100 scrollbar-track-transparent border border-gray-100 rounded-lg p-3 bg-gray-50/30">
+            {prefectures.map((pref) => {
+              const isSelected = Array.isArray(filters.prefecture) 
+                ? filters.prefecture.includes(pref)
+                : filters.prefecture === pref;
+              return (
+                <label key={pref} className="flex items-center group cursor-pointer">
+                  <div className="relative flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => handlePrefectureChange(pref)}
+                      className="peer h-4 w-4 rounded border-gray-300 text-pink-500 focus:ring-pink-300 transition-all cursor-pointer opacity-0 absolute"
+                    />
+                    <div className={`h-4 w-4 rounded border ${isSelected ? 'bg-pink-500 border-pink-500' : 'bg-white border-gray-300'} peer-focus:ring-2 peer-focus:ring-pink-300 transition-all flex items-center justify-center`}>
+                      {isSelected && (
+                        <svg className="w-2.5 h-2.5 text-white fill-current" viewBox="0 0 20 20">
+                          <path d="M0 11l2-2 5 5L18 3l2 2L7 18z" />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                  <span className={`ml-3 text-sm transition-colors ${isSelected ? 'text-pink-600 font-bold' : 'text-gray-600 group-hover:text-pink-400'}`}>
+                    {pref}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
         </div>
 
         {/* Age Category */}

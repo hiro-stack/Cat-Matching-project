@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FC } from "react";
+import { Cat } from "lucide-react";
 
 const Footer: FC = () => {
   return (
@@ -8,9 +9,11 @@ const Footer: FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* サイト情報 */}
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-2xl">🐱</span>
-              <span className="text-xl font-bold">保護猫マッチング</span>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white border border-white/20">
+                <Cat className="w-6 h-6" />
+              </div>
+              <span className="text-xl font-black tracking-tight">お迎え<span className="text-pink-300">マッチ</span></span>
             </div>
             <p className="text-[#e8d5f2] text-sm">
               保護猫との出会いをサポートするプラットフォームです。
@@ -58,7 +61,7 @@ const Footer: FC = () => {
         </div>
 
         <div className="mt-8 pt-8 border-t border-[#9b9baa]/30 text-center text-sm text-[#e8d5f2]">
-          <p>&copy; 2026 保護猫マッチング. All rights reserved.</p>
+          <p>&copy; 2026 保護猫 お迎えマッチ. All rights reserved.</p>
         </div>
       </div>
     </footer>

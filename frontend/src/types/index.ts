@@ -46,6 +46,9 @@ export interface User {
   shelter_info?: {
     id: number;
     name: string;
+    prefecture?: string;
+    city?: string;
+    address?: string;
     verification_status: 'pending' | 'approved' | 'rejected' | 'need_fix' | 'suspended';
     review_message?: string;
   };

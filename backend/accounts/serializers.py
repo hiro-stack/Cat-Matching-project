@@ -65,6 +65,9 @@ class UserPrivateSerializer(serializers.ModelSerializer):
             return {
                 'id': shelter_user.shelter.id,
                 'name': shelter_user.shelter.name,
+                'prefecture': shelter_user.shelter.prefecture,
+                'city': shelter_user.shelter.city,
+                'address': shelter_user.shelter.address,
                 'verification_status': shelter_user.shelter.verification_status,
                 'review_message': shelter_user.shelter.review_message,
             }
@@ -97,7 +100,8 @@ class UserMeUpdateSerializer(serializers.ModelSerializer):
         instance = super().update(instance, validated_data)
         
         # Profileの更新
-        if profile_data is not None and instance.user_type == 'adopter':
+        if profile_data is not None:
+            # ユーザー種別に関わらず、個人としてのプロフィール情報を保持できるようにする
             profile, created = ApplicantProfile.objects.get_or_create(user=instance)
             for attr, value in profile_data.items():
                 setattr(profile, attr, value)

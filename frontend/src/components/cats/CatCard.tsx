@@ -3,7 +3,7 @@ import { CatList } from "@/types";
 import Link from "next/link";
 import { ImageWithFallback } from "@/components/common/ImageWithFallback";
 import { FC, useState, useEffect } from "react";
-import { Heart } from "lucide-react";
+import { Heart, PawPrint } from "lucide-react";
 import api from "@/lib/api";
 import Cookies from "js-cookie";
 
@@ -87,8 +87,8 @@ const CatCard: FC<CatCardProps> = ({ cat, onFavoriteChange, showFavoriteButton =
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
-            <span className="text-6xl">🐾</span>
+          <div className="w-full h-full flex items-center justify-center bg-pink-50 text-pink-200">
+            <PawPrint className="w-16 h-16" />
           </div>
         )}
 

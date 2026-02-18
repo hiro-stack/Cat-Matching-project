@@ -61,7 +61,7 @@ class ShelterRegistrationView(generics.CreateAPIView):
             shelter_name = shelter_user.shelter.name if shelter_user and shelter_user.shelter else '（団体名不明）'
             
             admin_frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000').rstrip('/')
-            subject = '【保護猫マッチング】新規団体登録がありました'
+            subject = '【】新規団体登録がありました'
             message = f"""
 新規の保護団体登録がありました。
 管理画面から内容を確認し、審査を行ってください。

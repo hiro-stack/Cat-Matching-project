@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, MapPin, Phone, Mail, Play, Image as ImageIcon, ExternalLink, Calendar, Clock, Heart, Activity, Stethoscope, Twitter, AlertCircle } from "lucide-react";
+import { ArrowLeft, MapPin, Phone, Mail, Play, Image as ImageIcon, ExternalLink, Calendar, Clock, Heart, Activity, Stethoscope, Twitter, AlertCircle, PawPrint, Lightbulb, Home, Sparkles, CheckCircle2, Handshake } from "lucide-react";
 import { catsService } from "@/services/cats";
 import { CatDetail, CatImage, CatVideo } from "@/types";
 import { ImageWithFallback } from "@/components/common/ImageWithFallback";
@@ -27,8 +27,8 @@ const STATUS_COLORS = {
 } as const;
 
 const GENDER_LABELS = {
-  male: "オス ♂",
-  female: "メス ♀",
+  male: "オス",
+  female: "メス",
   unknown: "不明",
 } as const;
 
@@ -301,8 +301,9 @@ export default function CatDetailPage() {
                   />
                 )
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-400">
-                  <span className="text-6xl">🐾</span>
+                <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50 text-gray-200 gap-4">
+                  <PawPrint className="w-24 h-24" />
+                  <p className="text-sm font-bold uppercase tracking-widest text-gray-300">No Image Available</p>
                 </div>
               )}
 
@@ -370,8 +371,9 @@ export default function CatDetailPage() {
 
             {/* キャプション */}
             {selectedMedia?.caption && (
-              <p className="text-sm text-gray-600 bg-white/50 rounded-lg py-2 px-4 shadow-sm border border-gray-100">
-                💡 {selectedMedia.caption}
+              <p className="text-sm text-gray-600 bg-white/80 backdrop-blur-sm rounded-xl py-3 px-5 shadow-sm border border-pink-100 flex items-start gap-3">
+                <Lightbulb className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                <span>{selectedMedia.caption}</span>
               </p>
             )}
             
@@ -380,8 +382,11 @@ export default function CatDetailPage() {
                 onClick={() => router.push(`/shelters/${cat.shelter.id}`)}
                 className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-pink-100 transition-all cursor-pointer group/card"
             >
-                 <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                   <span className="text-xl">🏠</span> お問い合わせ・譲渡元
+                 <h2 className="text-lg font-black text-gray-800 mb-6 flex items-center gap-3">
+                   <div className="w-10 h-10 bg-indigo-50 text-indigo-500 rounded-xl flex items-center justify-center shadow-sm">
+                     <Home className="w-6 h-6" />
+                   </div>
+                   お問い合わせ・譲渡元
                  </h2>
                  <div className="space-y-6">
                       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -478,8 +483,11 @@ export default function CatDetailPage() {
 
             {/* 性格・特徴 */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <span className="text-xl">✨</span> 性格・特徴
+                <h2 className="text-lg font-black text-gray-800 mb-5 flex items-center gap-3">
+                    <div className="w-10 h-10 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center shadow-sm">
+                      <Sparkles className="w-6 h-6" />
+                    </div>
+                    性格・特徴
                 </h2>
                 
                 <div className="flex flex-wrap gap-2 mb-4">
@@ -511,22 +519,25 @@ export default function CatDetailPage() {
             
              {/* 医療情報 */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <span className="text-xl">🏥</span> 医療情報・健康状態
+                <h2 className="text-lg font-black text-gray-800 mb-6 flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center shadow-sm">
+                      <Activity className="w-6 h-6" />
+                    </div>
+                    医療情報・健康状態
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div className="bg-gray-50 p-3 rounded-lg">
                         <span className="block text-xs text-gray-500 mb-1">不妊去勢</span>
-                        <span className="font-medium text-gray-800">
-                             {cat.spay_neuter_status === 'done' ? '実施済み ✅' : 
+                        <span className="font-bold text-gray-800 flex items-center gap-1.5">
+                             {cat.spay_neuter_status === 'done' ? <><CheckCircle2 className="w-4 h-4 text-green-500" /> 実施済み</> : 
                               cat.spay_neuter_status === 'planned' ? '実施予定' : 
                               cat.spay_neuter_status === 'not_yet' ? '未実施' : '不明'}
                         </span>
                     </div>
                      <div className="bg-gray-50 p-3 rounded-lg">
                         <span className="block text-xs text-gray-500 mb-1">ワクチン</span>
-                        <span className="font-medium text-gray-800">
-                             {cat.vaccination_status === 'done' ? '接種済み ✅' : 
+                        <span className="font-bold text-gray-800 flex items-center gap-1.5">
+                             {cat.vaccination_status === 'done' ? <><CheckCircle2 className="w-4 h-4 text-green-500" /> 接種済み</> : 
                               cat.vaccination_status === 'partial' ? '一部接種済み' : 
                               cat.vaccination_status === 'not_yet' ? '未接種' : '不明'}
                         </span>
@@ -554,8 +565,11 @@ export default function CatDetailPage() {
             
             {/* 譲渡条件 */}
               <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <span className="text-xl">🤝</span> 譲渡条件
+                <h2 className="text-lg font-black text-gray-800 mb-6 flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-50 text-green-500 rounded-xl flex items-center justify-center shadow-sm">
+                      <Handshake className="w-6 h-6" />
+                    </div>
+                    譲渡条件
                 </h2>
                 <div className="space-y-4">
                       <div className="flex justify-between items-center py-2 border-b border-gray-50">

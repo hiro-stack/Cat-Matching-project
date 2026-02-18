@@ -115,6 +115,10 @@ class ShelterRegistrationSerializer(serializers.Serializer):
                 is_active=True
             )
             
+            # 4. 個人プロフィールも作成 (後で居住地などを登録できるようにするため)
+            from accounts.models import ApplicantProfile
+            ApplicantProfile.objects.get_or_create(user=user)
+            
             return user
 
 class ShelterMemberSerializer(serializers.ModelSerializer):

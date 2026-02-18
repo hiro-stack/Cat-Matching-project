@@ -3,7 +3,7 @@
 import { useSearchParams } from 'next/navigation';
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
-import { CheckCircle, ShieldAlert } from "lucide-react";
+import { CheckCircle, ShieldAlert, AlertCircle } from "lucide-react";
 import Link from 'next/link';
 import { Suspense } from 'react';
 
@@ -68,8 +68,9 @@ function ApplicationCompleteContent() {
              </div>
              
              {!applicationId && (
-                 <p className="text-xs text-red-400 mt-4">
-                     ※申請IDが見つかりません。履歴からご確認ください。
+                 <p className="text-xs text-red-400 mt-4 flex items-center justify-center gap-1.5">
+                     <AlertCircle className="w-4 h-4" />
+                     申請IDが見つかりません。履歴からご確認ください。
                  </p>
              )}
 

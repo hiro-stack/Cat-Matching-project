@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Cookies from "js-cookie";
 import api from "@/lib/api";
-import { ArrowLeft, Send, User as UserIcon, Home, Clock } from "lucide-react";
+import { ArrowLeft, Send, User as UserIcon, Home, Clock, MessageSquare, AlertCircle } from "lucide-react";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
 
@@ -206,9 +206,11 @@ export default function MessagePage() {
           </div>
 
           {messages.length === 0 ? (
-             <div className="h-full flex flex-col items-center justify-center text-gray-400 space-y-2 opacity-60">
-               <div className="text-4xl">💬</div>
-               <p className="text-sm font-medium">メッセージを送信してやり取りを始めましょう</p>
+             <div className="h-full flex flex-col items-center justify-center text-gray-300 space-y-4 opacity-80">
+               <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center">
+                 <MessageSquare className="w-8 h-8 text-gray-400" />
+               </div>
+               <p className="text-sm font-black uppercase tracking-widest">Start a conversation</p>
              </div>
           ) : (
             messages.map((msg, index) => {
@@ -337,8 +339,9 @@ export default function MessagePage() {
                   <Send className="w-5 h-5" />
                 </button>
               </form>
-              <p className="text-[10px] text-center text-gray-400 mt-2">
-                ※誹謗中傷や個人情報の取り扱いには十分ご注意ください
+              <p className="text-[10px] text-center text-gray-400 mt-2 flex items-center justify-center gap-1">
+                <AlertCircle className="w-2.5 h-2.5" />
+                誹謗中傷や個人情報の取り扱いには十分ご注意ください
               </p>
             </>
           )}

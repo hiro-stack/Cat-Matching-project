@@ -6,7 +6,7 @@ import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { User } from '@/types';
-import { ClipboardList, Bell } from 'lucide-react';
+import { ClipboardList, Bell, Cat, User as UserIcon, LogOut, Settings, Heart, Home, ChevronDown } from 'lucide-react';
 
 const Header: FC = () => {
   const router = useRouter();
@@ -97,9 +97,13 @@ const Header: FC = () => {
       <div className="container mx-auto px-4 h-full flex items-center justify-between">
         {/* Left: Logo */}
         <div className="flex items-center gap-2">
-          <Link href="/" className="flex items-center gap-2 text-gray-800 hover:opacity-80 transition-opacity">
-            <span className="text-2xl">🐱</span>
-            <span className="font-bold text-lg tracking-wide">保護猫マッチング</span>
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-10 h-10 bg-gradient-to-br from-pink-400 to-pink-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-pink-100 group-hover:scale-110 transition-transform duration-300 ring-2 ring-white">
+              <Cat className="w-6 h-6" />
+            </div>
+            <span className="font-black text-xl tracking-tight text-gray-800">
+              お迎え<span className="text-pink-500">マッチ</span>
+            </span>
           </Link>
         </div>
 
@@ -158,22 +162,15 @@ const Header: FC = () => {
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-full border border-gray-200 hover:border-pink-300 hover:bg-pink-50 transition-all"
+                  className="flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-full border border-gray-200 hover:border-pink-300 hover:bg-pink-50 transition-all bg-white shadow-sm"
                 >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-400 to-pink-500 flex items-center justify-center text-white font-medium text-sm">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-400 to-pink-500 flex items-center justify-center text-white font-medium text-sm shadow-inner">
                     {user.username.charAt(0).toUpperCase()}
                   </div>
-                  <span className="text-sm font-medium text-gray-700 hidden lg:block max-w-[100px] truncate">
+                  <span className="text-sm font-bold text-gray-700 hidden lg:block max-w-[100px] truncate">
                     {user.username}
                   </span>
-                  <svg 
-                    className={`w-4 h-4 text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
+                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {isDropdownOpen && (
@@ -197,18 +194,22 @@ const Header: FC = () => {
                       <Link
                         href="/profile"
                         onClick={() => setIsDropdownOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors group"
                       >
-                        <span className="text-lg">👤</span>
-                        <span className="text-sm font-medium">プロフィール</span>
+                        <div className="p-1.5 bg-gray-100 text-gray-500 rounded-lg group-hover:bg-pink-100 group-hover:text-pink-600 transition-colors">
+                          <UserIcon className="w-4 h-4" />
+                        </div>
+                        <span className="text-sm font-bold">プロフィール</span>
                       </Link>
                       
                       <Link
                         href="/profile/edit"
                         onClick={() => setIsDropdownOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors group"
                       >
-                        <span className="text-lg">✏️</span>
+                        <div className="p-1.5 bg-gray-100 text-gray-500 rounded-lg group-hover:bg-pink-100 group-hover:text-pink-600 transition-colors">
+                          <Settings className="w-4 h-4" />
+                        </div>
                         <span className="text-sm font-medium">プロフィール編集</span>
                       </Link>
 
@@ -217,18 +218,22 @@ const Header: FC = () => {
                           <Link
                             href="/profile/applications"
                             onClick={() => setIsDropdownOpen(false)}
-                            className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
+                            className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors group"
                           >
-                            <span className="text-lg">📋</span>
+                            <div className="p-1.5 bg-gray-100 text-gray-500 rounded-lg group-hover:bg-pink-100 group-hover:text-pink-600 transition-colors">
+                              <ClipboardList className="w-4 h-4" />
+                            </div>
                             <span className="text-sm font-medium">申請履歴</span>
                           </Link>
 
                           <Link
                             href="/profile/favorites"
                             onClick={() => setIsDropdownOpen(false)}
-                            className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
+                            className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors group"
                           >
-                            <span className="text-lg">❤️</span>
+                            <div className="p-1.5 bg-gray-100 text-gray-500 rounded-lg group-hover:bg-pink-100 group-hover:text-pink-600 transition-colors">
+                              <Heart className="w-4 h-4" />
+                            </div>
                             <span className="text-sm font-medium">お気に入り一覧</span>
                           </Link>
                         </>
@@ -238,20 +243,24 @@ const Header: FC = () => {
                         <Link
                           href="/shelter/dashboard"
                           onClick={() => setIsDropdownOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-blue-600 hover:bg-blue-50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2.5 text-blue-600 hover:bg-blue-50 transition-colors group"
                         >
-                          <span className="text-lg">🏠</span>
-                          <span className="text-sm font-medium">団体ダッシュボード</span>
+                          <div className="p-1.5 bg-blue-50 text-blue-500 rounded-lg group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                            <Home className="w-4 h-4" />
+                          </div>
+                          <span className="text-sm font-bold">団体ダッシュボード</span>
                         </Link>
                       )}
 
                       <div className="mt-1 pt-1 border-t border-gray-100">
                         <button
                           onClick={handleLogout}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 text-red-500 hover:bg-red-50 transition-all rounded-xl"
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-red-500 hover:bg-red-50 transition-all group"
                         >
-                          <span className="text-lg">🚪</span>
-                          <span className="text-sm font-medium">ログアウト</span>
+                          <div className="p-1.5 bg-red-50 text-red-500 rounded-lg group-hover:bg-red-500 group-hover:text-white transition-colors">
+                            <LogOut className="w-4 h-4" />
+                          </div>
+                          <span className="text-sm font-bold">ログアウト</span>
                         </button>
                       </div>
                     </div>

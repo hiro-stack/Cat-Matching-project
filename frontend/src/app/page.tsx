@@ -9,6 +9,7 @@ import SearchHero from "@/components/sections/SearchHero";
 import CatFilter from "@/components/cats/CatFilter";
 import CatCard from "@/components/cats/CatCard";
 import Footer from "@/components/common/Footer";
+import { ChevronLeft, ChevronRight, HelpCircle } from "lucide-react";
 
 export default function Home() {
   const [filters, setFilters] = useState<CatFilters>({});
@@ -108,13 +109,13 @@ export default function Home() {
                   <button
                     onClick={() => handlePageChange(page - 1)}
                     disabled={page === 1}
-                    className={`p-2 rounded-lg border ${
+                    className={`p-2 rounded-xl transition-all ${
                       page === 1 
-                        ? 'border-gray-200 text-gray-300 cursor-not-allowed' 
-                        : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                        ? 'bg-gray-50 text-gray-300 cursor-not-allowed' 
+                        : 'bg-white border border-gray-100 text-gray-600 hover:border-pink-200 hover:text-pink-500 hover:shadow-md'
                     }`}
                   >
-                    ←
+                    <ChevronLeft className="w-5 h-5" />
                   </button>
                   
                   {[...Array(Math.ceil(totalCount / 20))].map((_, i) => {
@@ -150,13 +151,13 @@ export default function Home() {
                   <button
                     onClick={() => handlePageChange(page + 1)}
                     disabled={page >= Math.ceil(totalCount / 20)}
-                    className={`p-2 rounded-lg border ${
+                    className={`p-2 rounded-xl transition-all ${
                       page >= Math.ceil(totalCount / 20)
-                        ? 'border-gray-200 text-gray-300 cursor-not-allowed' 
-                        : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                        ? 'bg-gray-50 text-gray-300 cursor-not-allowed' 
+                        : 'bg-white border border-gray-100 text-gray-600 hover:border-pink-200 hover:text-pink-500 hover:shadow-md'
                     }`}
                   >
-                    →
+                    <ChevronRight className="w-5 h-5" />
                   </button>
                 </div>
               )}
@@ -167,9 +168,10 @@ export default function Home() {
 
       <Footer />
 
-      {/* Floating Action Button */}
-      <button className="fixed bottom-8 right-8 w-14 h-14 bg-white text-pink-500 rounded-full shadow-lg flex items-center justify-center hover:bg-pink-50 transition-colors border border-pink-100 z-50">
-        <span className="text-2xl font-bold">?</span>
+      {/* Floating Help Button */}
+      <button className="fixed bottom-8 right-8 w-16 h-16 bg-white text-pink-500 rounded-[2rem] shadow-2xl flex flex-col items-center justify-center hover:bg-pink-50 hover:scale-105 active:scale-95 transition-all border border-pink-100 z-50 group">
+        <HelpCircle className="w-6 h-6 mb-0.5 group-hover:rotate-12 transition-transform" />
+        <span className="text-[10px] font-black uppercase tracking-tighter">Help</span>
       </button>
     </div>
   );

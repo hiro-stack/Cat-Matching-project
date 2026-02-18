@@ -18,7 +18,10 @@ import {
   MapPin,
   Globe,
   Smartphone,
-  AlertCircle
+  AlertCircle,
+  Lock,
+  Sparkles,
+  Info
 } from "lucide-react";
 
 export default function SignupPage() {
@@ -228,7 +231,10 @@ export default function SignupPage() {
                 <Link href="/shelter/dashboard" className="inline-flex items-center justify-center w-full py-4 bg-gray-900 text-white font-bold rounded-2xl hover:bg-gray-800 transition-all shadow-lg text-lg">
                   管理画面へ
                 </Link>
-                <p className="text-xs text-gray-400">※猫の登録（下書き）のみ可能ですが、公開は審査完了後となります。</p>
+                <p className="text-xs text-gray-400 flex items-center justify-center gap-1">
+                  <Info className="w-3 h-3" />
+                  猫の登録（下書き）のみ可能ですが、公開は審査完了後となります。
+                </p>
               </div>
             </div>
           </div>
@@ -335,7 +341,10 @@ export default function SignupPage() {
                         <div>
                           <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">カフェ名・団体名 <span className="text-red-500">*</span></label>
                           <input type="text" name="shelter_name" value={formData.shelter_name} onChange={handleChange} className={`w-full px-5 py-4 bg-gray-50 border-0 rounded-2xl focus:ring-2 focus:ring-pink-300 outline-none ${errors.shelter_name ? "ring-2 ring-red-300" : ""}`} placeholder="保護猫カフェ 〇〇" />
-                          <p className="mt-2 text-[10px] text-gray-400 italic">※ユーザーに表示される正式な名称をご入力ください。</p>
+                          <p className="mt-2 text-[10px] text-gray-400 italic flex items-center gap-1">
+                            <Info className="w-3 h-3" />
+                            ユーザーに表示される正式な名称をご入力ください。
+                          </p>
                           {errors.shelter_name && <p className="mt-2 text-xs text-red-500 font-medium">{errors.shelter_name}</p>}
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -369,8 +378,10 @@ export default function SignupPage() {
                   {currentStep === 2 && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                       <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2 mb-6"><Smartphone className="w-6 h-6 text-pink-500" /> ② 連絡先・本人確認</h2>
-                      <div className="p-5 bg-blue-50/50 rounded-3xl border border-blue-100 flex gap-3 items-center mb-8">
-                        <span className="text-xl">🔒</span>
+                      <div className="p-5 bg-blue-50/50 rounded-3xl border border-blue-100 flex gap-4 items-center mb-8">
+                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-blue-500">
+                          <Lock className="w-5 h-5" />
+                        </div>
                         <p className="text-sm text-blue-800 font-medium leading-relaxed">電話番号・メールは運営確認でのみ使用し、ユーザーに直接公開されません。</p>
                       </div>
                       <div className="space-y-6">
@@ -421,9 +432,11 @@ export default function SignupPage() {
                   {currentStep === 4 && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                       <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2 mb-6"><Globe className="w-6 h-6 text-pink-500" /> ④ 外部リンク（任意）</h2>
-                      <div className="p-5 bg-green-50/50 rounded-3xl border border-green-100 flex gap-3 items-center mb-8">
-                        <span className="text-xl">✨</span>
-                        <p className="text-sm text-green-800 font-medium">公式サイトやSNSを登録すると、ユーザーの信頼度が大幅に高まります。</p>
+                      <div className="p-5 bg-green-50/50 rounded-3xl border border-green-100 flex gap-4 items-center mb-8">
+                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-green-500">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <p className="text-sm text-green-800 font-medium leading-relaxed">公式サイトやSNSを登録すると、ユーザーの信頼度が大幅に高まります。</p>
                       </div>
                       <div className="space-y-6">
                         <div>

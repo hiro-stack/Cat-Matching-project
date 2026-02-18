@@ -6,6 +6,7 @@ import { authService } from "@/services/auth";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
 import { User, ApplicantProfile } from "@/types";
+import { Info } from "lucide-react";
 
 export default function ProfileEditPage() {
   const router = useRouter();
@@ -182,7 +183,10 @@ export default function ProfileEditPage() {
                       <option value="other">その他</option>
                       <option value="no_answer">回答しない</option>
                     </select>
-                    <p className="text-xs text-gray-400 mt-1">※団体提出用（マッチングスコアには使用しません）</p>
+                    <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                      <Info className="w-3 h-3" />
+                      団体提出用（マッチングスコアには使用しません）
+                    </p>
                   </div>
 
                   <div className="md:col-span-2">
@@ -294,7 +298,7 @@ export default function ProfileEditPage() {
               {/* B. プロフィール（相性推定用・強く推奨） */}
               <section>
                 <h2 className="text-lg font-bold text-pink-600 border-b border-pink-100 pb-2 mb-4">
-                  相性・ライフスタイル <span className="text-sm font-normal text-gray-500 ml-2">※マッチング精度向上のため入力推奨</span>
+                  相性・ライフスタイル <span className="text-sm font-normal text-gray-400 ml-2 inline-flex items-center gap-1"><Info className="w-3 h-3" /> マッチング精度向上のため入力推奨</span>
                 </h2>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

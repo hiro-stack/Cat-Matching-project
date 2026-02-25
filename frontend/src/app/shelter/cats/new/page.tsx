@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import Cookies from "js-cookie";
 import api from "@/lib/api";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
@@ -98,12 +97,6 @@ export default function NewCatPage() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const token = Cookies.get("access_token");
-      if (!token) {
-        router.push("/shelter/login");
-        return;
-      }
-
       try {
         const response = await api.get("/api/accounts/profile/");
         if (response.data.user_type !== "shelter" && response.data.user_type !== "admin") {

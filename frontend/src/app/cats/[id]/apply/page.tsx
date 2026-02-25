@@ -18,7 +18,6 @@ import {
   Briefcase
 } from "lucide-react";
 import api from "@/lib/api";
-import Cookies from "js-cookie";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
 import { CatDetail, User as UserType } from "@/types";
@@ -84,12 +83,6 @@ export default function ApplicationApplyPage() {
   });
 
   useEffect(() => {
-    const token = Cookies.get("access_token");
-    if (!token) {
-      router.push(`/login?redirect=/cats/${catId}/apply`);
-      return;
-    }
-
     const fetchData = async () => {
       try {
         setIsLoading(true);
@@ -105,8 +98,12 @@ export default function ApplicationApplyPage() {
         //   // 警告を出すか、編集ページへ促す
         //   setApplicationError("連絡先情報（電話番号・住所）が未登録です。プロフィール設定から登録してください。");
         // }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to fetch data:", err);
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          router.push(`/login?redirect=/cats/${catId}/apply`);
+          return;
+        }
       } finally {
         setIsLoading(false);
       }

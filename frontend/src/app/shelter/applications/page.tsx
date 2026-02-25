@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Cookies from "js-cookie";
 import api from "@/lib/api";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
@@ -41,12 +40,6 @@ export default function ShelterApplicationsPage() {
 
   useEffect(() => {
     const fetchApplications = async () => {
-      const token = Cookies.get("access_token");
-      if (!token) {
-        router.push("/shelter/login");
-        return;
-      }
-
       try {
         const response = await api.get("/api/applications/");
         setApplications(response.data.results || response.data);

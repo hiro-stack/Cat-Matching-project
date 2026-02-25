@@ -53,6 +53,7 @@ export interface User {
     review_message?: string;
   };
   is_superuser?: boolean;
+  is_2fa_enabled?: boolean;
   applicant_profile?: ApplicantProfile;
 }
 

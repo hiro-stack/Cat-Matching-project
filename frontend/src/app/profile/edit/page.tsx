@@ -3,17 +3,29 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { authService } from "@/services/auth";
+import api from "@/lib/api";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
-import { User, ApplicantProfile } from "@/types";
-import { Info } from "lucide-react";
+import { ApplicantProfile } from "@/types";
+import { Info, ShieldCheck, ShieldOff, MailCheck, ChevronRight } from "lucide-react";
+
+type Step = 'loading' | '2fa' | 'profile';
 
 export default function ProfileEditPage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
+  const [step, setStep] = useState<Step>('loading');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
-  
+
+  // 2FA 状態
+  const [is2faEnabled, setIs2faEnabled] = useState(false);
+  const [twoFaStep, setTwoFaStep] = useState<'idle' | 'code_sent'>('idle');
+  const [twoFaCode, setTwoFaCode] = useState('');
+  const [twoFaMessage, setTwoFaMessage] = useState('');
+  const [twoFaError, setTwoFaError] = useState('');
+  const [isTwoFaSaving, setIsTwoFaSaving] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+
   // プロフィールデータ
   const [profile, setProfile] = useState<ApplicantProfile>({
     age: null,
@@ -38,11 +50,18 @@ export default function ProfileEditPage() {
         if (user.applicant_profile) {
           setProfile(prev => ({ ...prev, ...user.applicant_profile }));
         }
-      } catch (err) {
-        console.error("Failed to fetch profile:", err);
+        const enabled = user.is_2fa_enabled ?? false;
+        setIs2faEnabled(enabled);
+        setUserEmail(user.email ?? '');
+        // 2FAが未設定なら2FAステップへ、設定済みならプロフィールへ
+        setStep(enabled ? 'profile' : '2fa');
+      } catch (err: any) {
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          router.push("/login");
+          return;
+        }
         setError("プロフィールの読み込みに失敗しました。");
-      } finally {
-        setIsLoading(false);
+        setStep('profile');
       }
     };
 
@@ -51,12 +70,61 @@ export default function ProfileEditPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    
     if (type === 'checkbox') {
-       const checked = (e.target as HTMLInputElement).checked;
-       setProfile(prev => ({ ...prev, [name]: checked }));
+      const checked = (e.target as HTMLInputElement).checked;
+      setProfile(prev => ({ ...prev, [name]: checked }));
     } else {
-       setProfile(prev => ({ ...prev, [name]: value === "" ? null : value }));
+      setProfile(prev => ({ ...prev, [name]: value === "" ? null : value }));
+    }
+  };
+
+  const handleSendTwoFaCode = async () => {
+    setIsTwoFaSaving(true);
+    setTwoFaError('');
+    setTwoFaMessage('');
+    try {
+      await api.post('/api/accounts/2fa/enable/', {});
+      setTwoFaStep('code_sent');
+      setTwoFaMessage('確認コードをメールに送信しました。コードの有効期限は10分です。');
+    } catch (err: any) {
+      setTwoFaError(err.response?.data?.detail || 'コードの送信に失敗しました。');
+    } finally {
+      setIsTwoFaSaving(false);
+    }
+  };
+
+  const handleConfirmTwoFaCode = async () => {
+    setIsTwoFaSaving(true);
+    setTwoFaError('');
+    try {
+      await api.post('/api/accounts/2fa/enable/', { code: twoFaCode });
+      setIs2faEnabled(true);
+      setTwoFaStep('idle');
+      setTwoFaCode('');
+      setTwoFaMessage('二段階認証を有効にしました！プロフィール設定に進みます。');
+      setTimeout(() => {
+        setTwoFaMessage('');
+        setStep('profile');
+      }, 1500);
+    } catch (err: any) {
+      setTwoFaError(err.response?.data?.detail || 'コードが正しくないか、有効期限が切れています。');
+    } finally {
+      setIsTwoFaSaving(false);
+    }
+  };
+
+  const handleDisableTwoFa = async () => {
+    setIsTwoFaSaving(true);
+    setTwoFaError('');
+    setTwoFaMessage('');
+    try {
+      await api.post('/api/accounts/2fa/disable/', {});
+      setIs2faEnabled(false);
+      setTwoFaMessage('二段階認証を無効にしました。');
+    } catch (err: any) {
+      setTwoFaError(err.response?.data?.detail || '無効化に失敗しました。');
+    } finally {
+      setIsTwoFaSaving(false);
     }
   };
 
@@ -65,7 +133,6 @@ export default function ProfileEditPage() {
     setIsSaving(true);
     setError("");
 
-    // バリデーション (必須項目)
     if (!profile.indoors_agreement) {
       setError("完全室内飼いへの同意は必須です。");
       setIsSaving(false);
@@ -87,31 +154,25 @@ export default function ProfileEditPage() {
       return;
     }
     if (!profile.age) {
-        setError("年齢を入力してください。");
-        setIsSaving(false);
-        return;
+      setError("年齢を入力してください。");
+      setIsSaving(false);
+      return;
     }
     if (!profile.cat_experience) {
-        setError("猫の飼育経験を選択してください。");
-        setIsSaving(false);
-        return;
+      setError("猫の飼育経験を選択してください。");
+      setIsSaving(false);
+      return;
     }
 
     try {
-      // UserMeUpdateSerializer に合わせて構造化
-      // applicant_profile フィールドにネストして送信
       await authService.updateProfile({
         applicant_profile: profile
-      } as any); // Type assertion needed because updateProfile expects User partial
-      
-      // 成功したら猫一覧へ
+      } as any);
       router.push("/");
     } catch (err: any) {
-      console.error("Update error:", err);
       if (err.response?.data) {
-          // エラー処理（簡略化）
-          const msg = JSON.stringify(err.response.data);
-          setError(`保存に失敗しました: ${msg}`);
+        const msg = JSON.stringify(err.response.data);
+        setError(`保存に失敗しました: ${msg}`);
       } else {
         setError("プロフィールの保存に失敗しました。");
       }
@@ -130,7 +191,8 @@ export default function ProfileEditPage() {
     "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県"
   ];
 
-  if (isLoading) {
+  // ─── ローディング ───
+  if (step === 'loading') {
     return (
       <div className="min-h-screen bg-[#fef9f3] flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
@@ -138,12 +200,148 @@ export default function ProfileEditPage() {
     );
   }
 
+  // ─── 2FA 設定ステップ ───
+  if (step === '2fa') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#fef9f3] via-[#ffeef3] to-[#f5f0f6] font-sans text-gray-900">
+        <Header />
+        <main className="pt-24 pb-16 px-4">
+          <div className="max-w-md mx-auto">
+            {/* ステップ表示 */}
+            <div className="flex items-center justify-center gap-3 mb-8">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-pink-500 text-white text-sm font-bold flex items-center justify-center">1</div>
+                <span className="text-sm font-bold text-pink-600">セキュリティ設定</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-300" />
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-400 text-sm font-bold flex items-center justify-center">2</div>
+                <span className="text-sm font-medium text-gray-400">プロフィール設定</span>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-3xl shadow-xl p-8 border border-pink-100">
+              <div className="text-center mb-7">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-pink-100 to-pink-200 rounded-full mb-4">
+                  <ShieldCheck className="w-8 h-8 text-pink-500" />
+                </div>
+                <h1 className="text-2xl font-bold text-gray-800">二段階認証の設定</h1>
+                <p className="text-gray-500 mt-2 text-sm leading-relaxed">
+                  アカウントを保護するため、<br />
+                  ログイン時にメールで確認コードを送信します。
+                </p>
+              </div>
+
+              {twoFaMessage && (
+                <div className="mb-5 p-4 bg-green-50 border border-green-100 rounded-xl text-green-700 text-sm">
+                  {twoFaMessage}
+                </div>
+              )}
+              {twoFaError && (
+                <div className="mb-5 p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm">
+                  {twoFaError}
+                </div>
+              )}
+
+              <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 mb-6">
+                <div className="flex items-start gap-3">
+                  <MailCheck className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+                  <div className="text-sm text-blue-800">
+                    <p className="font-medium">確認コードの送信先</p>
+                    <p className="mt-0.5 font-mono">{userEmail}</p>
+                  </div>
+                </div>
+              </div>
+
+              {twoFaStep === 'idle' && (
+                <button
+                  type="button"
+                  onClick={handleSendTwoFaCode}
+                  disabled={isTwoFaSaving}
+                  className="w-full py-4 bg-gradient-to-r from-pink-500 to-pink-400 text-white font-bold rounded-xl shadow-md hover:shadow-lg hover:from-pink-600 hover:to-pink-500 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {isTwoFaSaving ? '送信中...' : '確認コードをメールに送る'}
+                  {!isTwoFaSaving && <ChevronRight className="w-5 h-5" />}
+                </button>
+              )}
+
+              {twoFaStep === 'code_sent' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      メールに届いた確認コード（6桁）
+                    </label>
+                    <input
+                      type="text"
+                      value={twoFaCode}
+                      onChange={(e) => {
+                        setTwoFaCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                        setTwoFaError('');
+                      }}
+                      maxLength={6}
+                      inputMode="numeric"
+                      pattern="[0-9]{6}"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-center text-2xl tracking-[0.5em] font-mono focus:border-pink-300 focus:ring-2 focus:ring-pink-100 transition-all"
+                      placeholder="000000"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleConfirmTwoFaCode}
+                    disabled={isTwoFaSaving || twoFaCode.length !== 6}
+                    className="w-full py-4 bg-gradient-to-r from-pink-500 to-pink-400 text-white font-bold rounded-xl shadow-md hover:shadow-lg hover:from-pink-600 hover:to-pink-500 transition-all disabled:opacity-60"
+                  >
+                    {isTwoFaSaving ? '確認中...' : '二段階認証を有効にする'}
+                  </button>
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      onClick={() => { setTwoFaStep('idle'); setTwoFaCode(''); setTwoFaError(''); setTwoFaMessage(''); }}
+                      className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      コードを再送する
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-6 pt-5 border-t border-gray-100 text-center">
+                <button
+                  type="button"
+                  onClick={() => setStep('profile')}
+                  className="text-sm text-gray-400 hover:text-gray-500 transition-colors underline underline-offset-2"
+                >
+                  スキップしてプロフィール設定へ
+                </button>
+              </div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // ─── プロフィール設定ステップ ───
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#fef9f3] via-[#ffeef3] to-[#f5f0f6] font-sans text-gray-900">
       <Header />
 
       <main className="pt-24 pb-16 px-4">
         <div className="max-w-3xl mx-auto">
+          {/* ステップ表示 */}
+          <div className="flex items-center justify-center gap-3 mb-8">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-green-400 text-white text-sm font-bold flex items-center justify-center">✓</div>
+              <span className="text-sm font-medium text-gray-400">セキュリティ設定</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-300" />
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-pink-500 text-white text-sm font-bold flex items-center justify-center">2</div>
+              <span className="text-sm font-bold text-pink-600">プロフィール設定</span>
+            </div>
+          </div>
+
           <div className="bg-white rounded-3xl shadow-xl p-8 border border-pink-100">
             <div className="text-center mb-8">
               <h1 className="text-2xl font-bold text-gray-800">プロフィール設定</h1>
@@ -160,11 +358,10 @@ export default function ProfileEditPage() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-8">
-              
+
               {/* A. 初期登録（必須・マッチング基盤） */}
               <section>
                 <h2 className="text-lg font-bold text-pink-600 border-b border-pink-100 pb-2 mb-4">基本情報</h2>
-                
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -178,7 +375,7 @@ export default function ProfileEditPage() {
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-pink-100 outline-none"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">性別</label>
                     <select
@@ -271,7 +468,7 @@ export default function ProfileEditPage() {
 
               <section>
                 <h2 className="text-lg font-bold text-pink-600 border-b border-pink-100 pb-2 mb-4">生活リズム</h2>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">平均留守時間</label>
@@ -288,7 +485,7 @@ export default function ProfileEditPage() {
                       <option value="more_than_12">12時間以上</option>
                     </select>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">在宅頻度</label>
                     <select
@@ -306,12 +503,12 @@ export default function ProfileEditPage() {
                 </div>
               </section>
 
-              {/* B. プロフィール（相性推定用・強く推奨） */}
+              {/* B. 相性・ライフスタイル */}
               <section>
                 <h2 className="text-lg font-bold text-pink-600 border-b border-pink-100 pb-2 mb-4">
                   相性・ライフスタイル <span className="text-sm font-normal text-gray-400 ml-2 inline-flex items-center gap-1"><Info className="w-3 h-3" /> マッチング精度向上のため入力推奨</span>
                 </h2>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">ペットの飼育経験 <span className="text-red-500">*</span></label>
@@ -373,6 +570,99 @@ export default function ProfileEditPage() {
                       <option value="low">少ない</option>
                     </select>
                   </div>
+                </div>
+              </section>
+
+              {/* セキュリティ設定（管理用） */}
+              <section>
+                <h2 className="text-lg font-bold text-pink-600 border-b border-pink-100 pb-2 mb-4 flex items-center gap-2">
+                  {is2faEnabled
+                    ? <ShieldCheck className="w-5 h-5 text-green-500" />
+                    : <ShieldOff className="w-5 h-5 text-gray-400" />
+                  }
+                  セキュリティ設定
+                </h2>
+
+                <div className="p-5 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="font-medium text-gray-800">二段階認証（メール OTP）</p>
+                      <p className="text-sm text-gray-500 mt-0.5">
+                        ログイン時にメールアドレスへ6桁の確認コードを送信します
+                      </p>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      is2faEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'
+                    }`}>
+                      {is2faEnabled ? '有効' : '無効'}
+                    </span>
+                  </div>
+
+                  {twoFaMessage && (
+                    <div className="mb-3 p-3 bg-green-50 border border-green-100 rounded-lg text-green-700 text-sm">
+                      {twoFaMessage}
+                    </div>
+                  )}
+                  {twoFaError && (
+                    <div className="mb-3 p-3 bg-red-50 border border-red-100 rounded-lg text-red-600 text-sm">
+                      {twoFaError}
+                    </div>
+                  )}
+
+                  {!is2faEnabled && twoFaStep === 'idle' && (
+                    <button
+                      type="button"
+                      onClick={handleSendTwoFaCode}
+                      disabled={isTwoFaSaving}
+                      className="mt-1 px-4 py-2 bg-pink-500 text-white text-sm font-medium rounded-lg hover:bg-pink-600 transition-colors disabled:opacity-60"
+                    >
+                      {isTwoFaSaving ? '送信中...' : '二段階認証を有効にする'}
+                    </button>
+                  )}
+
+                  {!is2faEnabled && twoFaStep === 'code_sent' && (
+                    <div className="mt-3 space-y-3">
+                      <p className="text-sm text-gray-600">メールに届いた6桁のコードを入力してください：</p>
+                      <input
+                        type="text"
+                        value={twoFaCode}
+                        onChange={(e) => setTwoFaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        maxLength={6}
+                        inputMode="numeric"
+                        pattern="[0-9]{6}"
+                        className="w-40 px-4 py-2 border border-gray-200 rounded-lg text-center text-xl tracking-widest font-mono focus:ring-2 focus:ring-pink-100 outline-none"
+                        placeholder="000000"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={handleConfirmTwoFaCode}
+                          disabled={isTwoFaSaving || twoFaCode.length !== 6}
+                          className="px-4 py-2 bg-pink-500 text-white text-sm font-medium rounded-lg hover:bg-pink-600 transition-colors disabled:opacity-60"
+                        >
+                          {isTwoFaSaving ? '確認中...' : '確認する'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setTwoFaStep('idle'); setTwoFaCode(''); setTwoFaError(''); setTwoFaMessage(''); }}
+                          className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                        >
+                          キャンセル
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {is2faEnabled && (
+                    <button
+                      type="button"
+                      onClick={handleDisableTwoFa}
+                      disabled={isTwoFaSaving}
+                      className="mt-1 px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-60"
+                    >
+                      {isTwoFaSaving ? '処理中...' : '二段階認証を無効にする'}
+                    </button>
+                  )}
                 </div>
               </section>
 

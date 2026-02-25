@@ -4,7 +4,6 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import Cookies from "js-cookie";
 import api from "@/lib/api";
 import { 
   ArrowLeft, 
@@ -146,12 +145,6 @@ export default function ShelterApplicationDetailPage() {
   }, []);
 
   useEffect(() => {
-    const token = Cookies.get("access_token");
-    if (!token) {
-      router.push("/shelter/login");
-      return;
-    }
-
     fetchData();
     fetchCurrentUser();
     pollingInterval.current = setInterval(fetchData, 5000);

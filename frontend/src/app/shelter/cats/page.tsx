@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import Cookies from "js-cookie";
 import api from "@/lib/api";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
@@ -24,12 +23,6 @@ export default function ShelterCatsPage() {
 
   useEffect(() => {
     const fetchMyCats = async () => {
-      const token = Cookies.get("access_token");
-      if (!token) {
-        router.push("/shelter/login");
-        return;
-      }
-
       try {
         // プロフィール情報を取得して権限を確認
         const userResponse = await api.get("/api/accounts/profile/");
@@ -61,12 +54,6 @@ export default function ShelterCatsPage() {
     }
     
     try {
-      const token = Cookies.get("access_token");
-      if (!token) {
-        router.push("/shelter/login");
-        return;
-      }
-      
       await api.delete(`/api/cats/${catId}/`);
       setCats(cats.filter(cat => cat.id !== catId));
       toast.success(`${catName}ちゃんを削除しました。`);

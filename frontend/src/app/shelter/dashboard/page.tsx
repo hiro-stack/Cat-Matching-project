@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Cookies from "js-cookie";
 import api from "@/lib/api";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
@@ -44,12 +43,6 @@ export default function ShelterDashboardPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const token = Cookies.get("access_token");
-      if (!token) {
-        router.push("/shelter/login");
-        return;
-      }
-
       try {
         // ユーザー情報取得
         const userResponse = await api.get("/api/accounts/profile/");
@@ -127,9 +120,12 @@ export default function ShelterDashboardPage() {
     fetchData();
   }, [router]);
 
-  const handleLogout = () => {
-    Cookies.remove("access_token");
-    Cookies.remove("refresh_token");
+  const handleLogout = async () => {
+    try {
+      await api.post("/api/accounts/logout/", {});
+    } catch {
+      // エラーでもログアウト処理を継続
+    }
     router.push("/shelter/login");
   };
 

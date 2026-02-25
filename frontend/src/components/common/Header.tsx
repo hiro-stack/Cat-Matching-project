@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { FC, useEffect, useState, useRef } from 'react';
-import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { User } from '@/types';
@@ -29,25 +28,18 @@ const Header: FC = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const token = Cookies.get('access_token');
-      if (!token) {
-        setIsLoading(false);
-        return;
-      }
-
       try {
         const response = await api.get('/api/accounts/profile/');
         setUser(response.data);
         // 初回取得
         fetchUnreadCount();
-        
+
         // ポーリング (30秒ごと)
         const interval = setInterval(fetchUnreadCount, 30000);
         return () => clearInterval(interval);
       } catch (error) {
-        console.error('Failed to fetch user:', error);
-        Cookies.remove('access_token');
-        Cookies.remove('refresh_token');
+        // 未認証 or トークン期限切れ → ログインなし状態
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
@@ -68,9 +60,12 @@ const Header: FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
-    Cookies.remove('access_token');
-    Cookies.remove('refresh_token');
+  const handleLogout = async () => {
+    try {
+      await api.post('/api/accounts/logout/', {});
+    } catch {
+      // エラーでもログアウト処理を継続
+    }
     setUser(null);
     setIsDropdownOpen(false);
     router.push('/');

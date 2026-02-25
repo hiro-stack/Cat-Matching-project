@@ -47,8 +47,12 @@ export default function ShelterProfileEditPage() {
         setShelter(shelterData);
         setLogoPreview(shelterData.logo_image);
         setIsAdmin(profileData.data.is_superuser || profileData.data.shelter_role === 'admin');
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to fetch data:", err);
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          router.push("/shelter/login");
+          return;
+        }
         toast.error("データの取得に失敗しました。");
       } finally {
         setIsLoading(false);

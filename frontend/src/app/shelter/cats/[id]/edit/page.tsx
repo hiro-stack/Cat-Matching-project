@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef, Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Cookies from "js-cookie";
 import api from "@/lib/api";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
@@ -77,12 +76,6 @@ function EditCatForm({ params }: { params: { id: string } }) {
   const videoInputRef = useRef<HTMLInputElement>(null);
 
   const fetchCat = useCallback(async () => {
-    const token = Cookies.get("access_token");
-    if (!token) {
-      router.push("/shelter/login");
-      return;
-    }
-
     try {
       // ユーザー情報の取得（権限チェック用）
       const userResponse = await api.get("/api/accounts/profile/");

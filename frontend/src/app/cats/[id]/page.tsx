@@ -8,7 +8,6 @@ import { catsService } from "@/services/cats";
 import { CatDetail, CatImage, CatVideo } from "@/types";
 import { ImageWithFallback } from "@/components/common/ImageWithFallback";
 import api from "@/lib/api";
-import Cookies from "js-cookie";
 
 const STATUS_LABELS = {
   open: "募集中",
@@ -157,12 +156,6 @@ export default function CatDetailPage() {
   }, [id]);
 
   const handleApplyClick = async () => {
-    const token = Cookies.get("access_token");
-    if (!token) {
-      router.push(`/login?redirect=/cats/${id}/apply`);
-      return;
-    }
-
     try {
       // ユーザー情報の役割をチェック
       const res = await api.get("/api/accounts/profile/");

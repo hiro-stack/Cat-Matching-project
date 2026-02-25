@@ -3,8 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Cookies from "js-cookie";
-import axios from "axios";
+import api from "@/lib/api";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
 import { 
@@ -126,24 +125,15 @@ export default function SignupPage() {
 
     try {
       const endpoint = isShelterFlow ? "/api/accounts/register/shelter/" : "/api/accounts/register/";
-      
-      // 新規登録APIには認証トークンを付けずにリクエストを送る
-      // （既にログイン済みの場合、無効なトークンが付与されて401エラーになる問題を防ぐ）
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await axios.post(`${API_URL}${endpoint}`, formData, {
-        headers: { 'Content-Type': 'application/json' },
-      });
-      const { tokens } = response.data;
 
-      const isSecure = process.env.NODE_ENV === "production";
-      Cookies.set("access_token", tokens.access, { expires: 1, secure: isSecure, sameSite: "Lax" });
-      Cookies.set("refresh_token", tokens.refresh, { expires: 7, secure: isSecure, sameSite: "Lax" });
+      // バックエンドが登録成功時に HttpOnly Cookie を自動セットする
+      await api.post(endpoint, formData);
 
       if (isShelterFlow) {
         setIsCompleted(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
-        router.push("/profile/edit");
+        router.push("/verify-email");
       }
     } catch (err: any) {
       console.error("Signup error detail:", err.response?.data || err.message);

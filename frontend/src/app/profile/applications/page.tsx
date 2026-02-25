@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Cookies from "js-cookie";
 import api from "@/lib/api";
 import { 
   ClipboardList, 
@@ -45,20 +44,18 @@ export default function ApplicationHistoryPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const token = Cookies.get("access_token");
-    if (!token) {
-      router.push("/login?redirect=/profile/applications");
-      return;
-    }
-
     const fetchApplications = async () => {
       try {
         const res = await api.get("/api/applications/");
         // res.data がページネーションされている可能性があるため、前回の修正と同様に処理
         const data = Array.isArray(res.data) ? res.data : (res.data.results || []);
         setApplications(data);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to fetch applications:", err);
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          router.push("/login");
+          return;
+        }
       } finally {
         setIsLoading(false);
       }

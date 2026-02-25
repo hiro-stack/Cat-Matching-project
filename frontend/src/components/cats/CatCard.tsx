@@ -5,7 +5,6 @@ import { ImageWithFallback } from "@/components/common/ImageWithFallback";
 import { FC, useState, useEffect } from "react";
 import { Heart, PawPrint } from "lucide-react";
 import api from "@/lib/api";
-import Cookies from "js-cookie";
 
 interface CatCardProps {
   cat: CatList;
@@ -46,13 +45,6 @@ const CatCard: FC<CatCardProps> = ({ cat, onFavoriteChange, showFavoriteButton =
   const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    const token = Cookies.get("access_token");
-    if (!token) {
-      alert("お気に入り登録するにはログインが必要です。");
-      return;
-    }
-
     setIsLoading(true);
     try {
       const response = await api.post("/api/favorites/toggle/", {

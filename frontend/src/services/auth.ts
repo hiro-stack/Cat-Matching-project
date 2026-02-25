@@ -8,10 +8,10 @@ export const authService = {
     return response.data;
   },
 
-  // ログイン (Token取得)
+  // ログイン (HttpOnly Cookie をバックエンドが自動セット)
   login: async (data: any) => {
     const response = await api.post('/api/accounts/login/', data);
-    return response.data; // { access, refresh }
+    return response.data;
   },
 
   // プロフィール取得
@@ -26,8 +26,8 @@ export const authService = {
     return response.data;
   },
 
-  // ログアウト (サーバーサイドでブラックリスト化する場合など。現在はクライアント側削除のみで十分だがIFとして用意)
+  // ログアウト (RefreshToken をブラックリスト化し HttpOnly Cookie を削除)
   logout: async () => {
-    // 必要なら /api/accounts/logout/ などを呼ぶ
+    await api.post('/api/accounts/logout/', {});
   }
 };

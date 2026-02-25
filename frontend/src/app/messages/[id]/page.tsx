@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import Cookies from "js-cookie";
 import api from "@/lib/api";
 import { ArrowLeft, Send, User as UserIcon, Home, Clock, MessageSquare, AlertCircle } from "lucide-react";
 import Header from "@/components/common/Header";
@@ -101,12 +100,6 @@ export default function MessagePage() {
   };
 
   useEffect(() => {
-    const token = Cookies.get("access_token");
-    if (!token) {
-      router.push("/login");
-      return;
-    }
-
     const init = async () => {
       await Promise.all([
         fetchApplication(),

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Cookies from "js-cookie";
 import api from "@/lib/api";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
@@ -15,12 +14,28 @@ export default function ShelterLoginPage() {
     password: "",
   });
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setError("");
+    setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
+  };
+
+  /** ログイン後の団体アカウント確認とリダイレクト */
+  const redirectAfterLogin = async () => {
+    const userResponse = await api.get("/api/accounts/profile/");
+    const user = userResponse.data;
+    if (user.user_type !== "shelter" && user.user_type !== "admin") {
+      await api.post("/api/accounts/logout/", {}).catch(() => {});
+      setError("このアカウントは保護団体として登録されていません。一般ユーザーとしてログインしてください。");
+      return;
+    }
+    router.push("/shelter/dashboard");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,36 +44,48 @@ export default function ShelterLoginPage() {
     setError("");
 
     try {
-      const response = await api.post("/api/accounts/login/", formData);
-      const { access, refresh } = response.data;
+      // ① バックエンドがログイン成功時に HttpOnly Cookie を自動セットする
+      const res = await api.post("/api/accounts/login/", formData);
 
-      // Cookieにトークンを保存
-      const isSecure = process.env.NODE_ENV === "production";
-      Cookies.set("access_token", access, { expires: 1, secure: isSecure, sameSite: "Lax" });
-      Cookies.set("refresh_token", refresh, { expires: 7, secure: isSecure, sameSite: "Lax" });
-
-      // ユーザー情報を取得して団体スタッフかどうか確認
-      const userResponse = await api.get("/api/accounts/profile/");
-      const user = userResponse.data;
-
-      if (user.user_type !== "shelter" && user.user_type !== "admin") {
-        // 団体アカウントでない場合はエラー
-        Cookies.remove("access_token");
-        Cookies.remove("refresh_token");
-        setError("このアカウントは保護団体として登録されていません。一般ユーザーとしてログインしてください。");
+      if (res.data.requires_2fa) {
+        setRequiresTwoFactor(true);
         return;
       }
 
-      // 団体ダッシュボードへリダイレクト
-      router.push("/shelter/dashboard");
+      await redirectAfterLogin();
     } catch (err: any) {
       console.error("Login error:", err);
-      if (err.response?.data?.detail) {
-        setError(err.response.data.detail);
-      } else if (err.response?.data) {
-        const errorData = err.response.data;
-        const errorMessages = Object.values(errorData).flat().join(" ");
-        setError(errorMessages || "ログインに失敗しました。メールアドレスとパスワードを確認してください。");
+      const data = err.response?.data;
+
+      if (!data) {
+        setError("サーバーに接続できませんでした。しばらく待ってから再度お試しください。");
+        return;
+      }
+
+      if (err.response?.status === 429) {
+        setError("ログイン試行が多すぎます。しばらく待ってから再度お試しください。");
+        return;
+      }
+
+      // フィールド別エラー（メール・パスワードのどちらが間違いか）
+      const newFieldErrors: { email?: string; password?: string } = {};
+      if (data.email) {
+        newFieldErrors.email = Array.isArray(data.email) ? data.email[0] : data.email;
+      }
+      if (data.password) {
+        newFieldErrors.password = Array.isArray(data.password) ? data.password[0] : data.password;
+      }
+      if (Object.keys(newFieldErrors).length > 0) {
+        setFieldErrors(newFieldErrors);
+        return;
+      }
+
+      // 全体エラー（アカウント無効化など）
+      if (data.detail) {
+        setError(data.detail);
+      } else if (data.non_field_errors) {
+        const msg = Array.isArray(data.non_field_errors) ? data.non_field_errors[0] : data.non_field_errors;
+        setError(msg);
       } else {
         setError("ログインに失敗しました。メールアドレスとパスワードを確認してください。");
       }
@@ -66,6 +93,96 @@ export default function ShelterLoginPage() {
       setIsLoading(false);
     }
   };
+
+  const handleTwoFactorSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+
+    try {
+      await api.post("/api/accounts/2fa/verify/", {
+        email: formData.email,
+        code: twoFactorCode,
+      });
+      await redirectAfterLogin();
+    } catch (err: any) {
+      const detail = err.response?.data?.detail;
+      setError(detail || "確認コードが正しくないか、有効期限が切れています。");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // OTP 入力フォーム（2FA が要求された場合）
+  if (requiresTwoFactor) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#f5f0f6] via-[#e8f4f8] to-[#f0f5ff] font-sans text-gray-900">
+        <Header />
+        <main className="pt-24 pb-16 px-4">
+          <div className="max-w-md mx-auto">
+            <div className="bg-white rounded-3xl shadow-xl p-8 border border-blue-100">
+              <div className="text-center mb-6">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-200 rounded-full mb-4">
+                  <span className="text-3xl">🔐</span>
+                </div>
+                <h1 className="text-2xl font-bold text-gray-800">二段階認証</h1>
+                <p className="text-gray-500 mt-2 text-sm">
+                  {formData.email} に送信した確認コードを入力してください
+                </p>
+              </div>
+
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm">
+                  {error}
+                </div>
+              )}
+
+              <form onSubmit={handleTwoFactorSubmit} className="space-y-5">
+                <div>
+                  <label htmlFor="twoFactorCode" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    確認コード（6桁）
+                  </label>
+                  <input
+                    type="text"
+                    id="twoFactorCode"
+                    value={twoFactorCode}
+                    onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    required
+                    maxLength={6}
+                    inputMode="numeric"
+                    pattern="[0-9]{6}"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-center text-2xl tracking-[0.5em] font-mono focus:border-blue-300 focus:ring-2 focus:ring-blue-100 transition-all"
+                    placeholder="000000"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading || twoFactorCode.length !== 6}
+                  className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-500 text-white font-semibold rounded-xl shadow-md hover:shadow-lg hover:from-blue-700 hover:to-indigo-600 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? "確認中..." : "確認する"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setRequiresTwoFactor(false); setTwoFactorCode(""); setError(""); }}
+                  className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  ← ログイン画面に戻る
+                </button>
+              </form>
+
+              <p className="mt-4 text-xs text-gray-400 text-center">
+                コードの有効期限は10分です。届かない場合は迷惑メールフォルダをご確認ください。
+              </p>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f5f0f6] via-[#e8f4f8] to-[#f0f5ff] font-sans text-gray-900">
@@ -110,9 +227,16 @@ export default function ShelterLoginPage() {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                  className={`w-full px-4 py-3 rounded-xl border outline-none transition-all ${
+                    fieldErrors.email
+                      ? "border-red-400 focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                      : "border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                  }`}
                   placeholder="メールアドレスを入力"
                 />
+                {fieldErrors.email && (
+                  <p className="mt-1.5 text-sm text-red-600">{fieldErrors.email}</p>
+                )}
               </div>
 
               <div>
@@ -129,9 +253,16 @@ export default function ShelterLoginPage() {
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                  className={`w-full px-4 py-3 rounded-xl border outline-none transition-all ${
+                    fieldErrors.password
+                      ? "border-red-400 focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                      : "border-gray-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                  }`}
                   placeholder="パスワードを入力"
                 />
+                {fieldErrors.password && (
+                  <p className="mt-1.5 text-sm text-red-600">{fieldErrors.password}</p>
+                )}
               </div>
 
               <button

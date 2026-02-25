@@ -3,7 +3,6 @@
 import { useEffect, useState, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Cookies from "js-cookie";
 import api from "@/lib/api";
 import Header from "@/components/common/Header";
 import Footer from "@/components/common/Footer";
@@ -81,12 +80,6 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const token = Cookies.get("access_token");
-      if (!token) {
-        router.push("/login");
-        return;
-      }
-
       try {
         const response = await api.get<User>("/api/accounts/profile/");
         setUser(response.data);

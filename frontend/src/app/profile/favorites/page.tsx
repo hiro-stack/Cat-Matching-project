@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Cookies from "js-cookie";
 import api from "@/lib/api";
 import { Heart, ArrowLeft, X } from "lucide-react";
 import Header from "@/components/common/Header";
@@ -28,20 +27,18 @@ export default function FavoritesPage() {
       const res = await api.get("/api/favorites/");
       const data = Array.isArray(res.data) ? res.data : (res.data.results || []);
       setFavorites(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to fetch favorites:", err);
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        router.push("/login");
+        return;
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    const token = Cookies.get("access_token");
-    if (!token) {
-      router.push("/login?redirect=/profile/favorites");
-      return;
-    }
-
     fetchFavorites();
   }, [router]);
 

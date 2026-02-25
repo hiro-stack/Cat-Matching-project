@@ -1,5 +1,4 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import Cookies from 'js-cookie';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -8,38 +7,33 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // ① HttpOnly Cookie を自動送信するために必須
+  withCredentials: true,
 });
 
-// リクエストインターセプター
+// ① リクエストインターセプター:
+//    トークンは HttpOnly Cookie で自動送信されるため、手動の Authorization ヘッダー注入は不要
 api.interceptors.request.use(
-  (config) => {
-    const token = Cookies.get('access_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (config) => config,
+  (error) => Promise.reject(error),
 );
 
-// Token Refresh Queue
+// Token Refresh Queue: 複数の 401 が同時に発生した場合に 1 回だけリフレッシュする
 let isRefreshing = false;
-let failedQueue: Array<{ resolve: (token: string) => void; reject: (error: any) => void }> = [];
+let failedQueue: Array<{ resolve: (value?: unknown) => void; reject: (error: any) => void }> = [];
 
-const processQueue = (error: any, token: string | null = null) => {
+const processQueue = (error: any) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
     } else {
-      prom.resolve(token!);
+      prom.resolve();
     }
   });
   failedQueue = [];
 };
 
-// レスポンスインターセプター
+// レスポンスインターセプター: 401 時に Cookie の RefreshToken でサイレントリフレッシュ
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
@@ -47,44 +41,31 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        return new Promise(function(resolve, reject) {
+        // 既にリフレッシュ中なら完了を待ってリトライ
+        return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
-        }).then((token) => {
-          originalRequest.headers.Authorization = 'Bearer ' + token;
-          return api(originalRequest);
-        }).catch((err) => {
-          return Promise.reject(err);
-        });
+        }).then(() => api(originalRequest))
+          .catch((err) => Promise.reject(err));
       }
 
       originalRequest._retry = true;
       isRefreshing = true;
 
       try {
-        const refreshToken = Cookies.get('refresh_token');
-        if (!refreshToken) {
-            throw new Error('No refresh token available');
-        }
+        // ③ Cookie に入っている RefreshToken を自動送信 (withCredentials: true)
+        //    バックエンドが新しい access_token を HttpOnly Cookie にセットする
+        await axios.post(
+          `${API_URL}/api/accounts/token/refresh/`,
+          {},
+          { withCredentials: true },
+        );
 
-        const response = await axios.post(`${API_URL}/api/accounts/token/refresh/`, {
-          refresh: refreshToken,
-        });
-
-        const { access } = response.data;
-
-        const isSecure = process.env.NODE_ENV === 'production';
-        Cookies.set('access_token', access, { expires: 1, secure: isSecure, sameSite: 'Lax' });
-
-        api.defaults.headers.common['Authorization'] = 'Bearer ' + access;
-        originalRequest.headers.Authorization = 'Bearer ' + access;
-
-        processQueue(null, access);
+        processQueue(null);
         return api(originalRequest);
       } catch (refreshError) {
-        processQueue(refreshError, null);
-
-        Cookies.remove('access_token');
-        Cookies.remove('refresh_token');
+        processQueue(refreshError);
+        // リフレッシュ失敗 → エラーを呼び出し元に伝播させる
+        // リダイレクトは各ページのエラーハンドラに任せる（ホームなどパブリックページへの誤リダイレクトを防ぐ）
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
@@ -92,7 +73,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

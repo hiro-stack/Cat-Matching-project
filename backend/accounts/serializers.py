@@ -42,7 +42,8 @@ class UserPrivateSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'email', 'user_type', 'phone_number',
             'address', 'profile_image', 'bio', 'created_at',
-            'shelter_role', 'shelter_info', 'is_superuser', 'applicant_profile'
+            'shelter_role', 'shelter_info', 'is_superuser', 'applicant_profile',
+            'is_2fa_enabled', 'is_email_verified',
         ]
         # GET用として安全性を確保（万が一更新に使われても重要項目は不可）
         read_only_fields = ['id', 'username', 'email', 'user_type', 'created_at']
@@ -163,6 +164,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     def validate(self, data):
         if data['password'] != data['password_confirm']:
             raise serializers.ValidationError({"password_confirm": "パスワードが一致しません"})
+        from django.contrib.auth.password_validation import validate_password
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        try:
+            validate_password(data['password'])
+        except DjangoValidationError as e:
+            raise serializers.ValidationError({"password": list(e.messages)})
         return data
     
     def create(self, validated_data):
@@ -213,17 +220,24 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise serializers.ValidationError('メールアドレスとパスワードを入力してください。')
 
         # メールアドレスでユーザーを検索
+        # セキュリティ: メール存在/パスワード誤りで同一メッセージを返し、ユーザー列挙攻撃を防ぐ
+        _generic_error = serializers.ValidationError(
+            {'non_field_errors': 'メールアドレスまたはパスワードが正しくありません。'}
+        )
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            raise serializers.ValidationError('メールアドレスまたはパスワードが正しくありません。')
+            raise _generic_error
 
         # パスワードを検証
         if not user.check_password(password):
-            raise serializers.ValidationError('メールアドレスまたはパスワードが正しくありません。')
+            raise _generic_error
 
         if not user.is_active:
-            raise serializers.ValidationError('このアカウントは無効化されています。')
+            raise serializers.ValidationError(
+                'このアカウントは現在利用できません。アカウントが無効化されている可能性があります。'
+                'お心当たりがない場合はお問い合わせください。'
+            )
 
         # JWTトークンを生成
         refresh = self.get_token(user)
@@ -231,6 +245,7 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
         return {
             'refresh': str(refresh),
             'access': str(refresh.access_token),
+            'user': user,  # View 側で 2FA チェックに使用
         }
 
 
@@ -256,3 +271,19 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         if data['new_password'] != data['re_new_password']:
             raise serializers.ValidationError({"re_new_password": "パスワードが一致しません"})
         return data
+
+
+class TwoFactorVerifySerializer(serializers.Serializer):
+    """ログイン時の 2FA コード検証用シリアライザー"""
+    email = serializers.EmailField()
+    code = serializers.CharField(max_length=6, min_length=6)
+
+
+class TwoFactorEnableSerializer(serializers.Serializer):
+    """2FA 有効化用シリアライザー（code なし → 送信、code あり → 確認）"""
+    code = serializers.CharField(max_length=6, min_length=6, required=False, allow_blank=True)
+
+
+class TwoFactorDisableSerializer(serializers.Serializer):
+    """2FA 無効化用シリアライザー（現在パスワード必須）"""
+    password = serializers.CharField(write_only=True)

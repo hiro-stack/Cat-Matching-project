@@ -1,6 +1,11 @@
+import random
+import string
+from datetime import timedelta
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.utils.timezone import now
 
 class User(AbstractUser):
     """カスタムユーザーモデル"""
@@ -40,6 +45,14 @@ class User(AbstractUser):
         blank=True,
         verbose_name='自己紹介'
     )
+    is_2fa_enabled = models.BooleanField(
+        default=False,
+        verbose_name='二段階認証'
+    )
+    is_email_verified = models.BooleanField(
+        default=False,
+        verbose_name='メール認証済み'
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='登録日時'
@@ -48,7 +61,7 @@ class User(AbstractUser):
         auto_now=True,
         verbose_name='更新日時'
     )
-    
+
     class Meta:
         verbose_name = 'ユーザー'
         verbose_name_plural = 'ユーザー'
@@ -66,6 +79,44 @@ class User(AbstractUser):
         else:
             self.is_active = False
             self.save()
+
+
+class TwoFactorCode(models.Model):
+    """メール OTP 二段階認証コード"""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='two_factor_codes',
+        verbose_name='ユーザー',
+    )
+    code = models.CharField(max_length=6, verbose_name='コード')
+    expires_at = models.DateTimeField(verbose_name='有効期限')
+    is_used = models.BooleanField(default=False, verbose_name='使用済み')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='作成日時')
+
+    class Meta:
+        verbose_name = '二段階認証コード'
+        verbose_name_plural = '二段階認証コード'
+        ordering = ['-created_at']
+
+    @classmethod
+    def create_for_user(cls, user):
+        """新規 OTP を生成する（既存の未使用コードは全て無効化）"""
+        cls.objects.filter(user=user, is_used=False).update(is_used=True)
+        code = ''.join(random.choices(string.digits, k=6))
+        return cls.objects.create(
+            user=user,
+            code=code,
+            expires_at=now() + timedelta(minutes=10),
+        )
+
+    @property
+    def is_valid(self):
+        return not self.is_used and self.expires_at > now()
+
+    def __str__(self):
+        return f"{self.user.email} - {self.code} ({'使用済み' if self.is_used else '有効'})"
 
 
 class ApplicantProfile(models.Model):
@@ -247,6 +298,8 @@ class EmailLog(models.Model):
         ('shelter_approval', '団体承認通知'),
         ('shelter_rejection', '団体否認通知'),
         ('application_status', '応募ステータス変更'),
+        ('two_factor', '二段階認証コード'),
+        ('email_verification', 'メール認証'),
         ('other', 'その他'),
     ]
     

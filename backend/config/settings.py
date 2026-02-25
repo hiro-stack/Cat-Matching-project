@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',  # ログアウト時のトークン無効化
     'corsheaders',
     'drf_spectacular',
     'accounts',
@@ -77,14 +78,17 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
-# Database
-db_config = dj_database_url.config(
-    default=f"mysql://{os.environ.get('DB_USER', 'catuser')}:{os.environ.get('DB_PASSWORD', 'catpassword')}@{os.environ.get('DB_HOST', 'db')}:{os.environ.get('DB_PORT', '3306')}/{os.environ.get('DB_NAME', 'cat_matching')}",
-    conn_max_age=600
-)
-
-if db_config['ENGINE'] == 'django.db.backends.mysql':
-    db_config.setdefault('OPTIONS', {})['charset'] = 'utf8mb4'
+# SUPABASE_DATABASE_URL が設定されている場合はそちらを優先（PostgreSQL）
+_supabase_url = os.environ.get('SUPABASE_DATABASE_URL')
+if _supabase_url:
+    db_config = dj_database_url.parse(_supabase_url, conn_max_age=600)
+else:
+    db_config = dj_database_url.config(
+        default=f"mysql://{os.environ.get('DB_USER', 'catuser')}:{os.environ.get('DB_PASSWORD', 'catpassword')}@{os.environ.get('DB_HOST', 'db')}:{os.environ.get('DB_PORT', '3306')}/{os.environ.get('DB_NAME', 'cat_matching')}",
+        conn_max_age=600
+    )
+    if db_config['ENGINE'] == 'django.db.backends.mysql':
+        db_config.setdefault('OPTIONS', {})['charset'] = 'utf8mb4'
 
 DATABASES = {
     'default': db_config
@@ -162,7 +166,7 @@ AUTH_USER_MODEL = 'accounts.User'
 # REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'accounts.authentication.JWTCookieAuthentication',  # HttpOnly Cookie + Authorizationヘッダー両対応
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
@@ -170,6 +174,18 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    # レート制限: ブルートフォース攻撃対策
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '200/day',
+        'user': '2000/day',
+        'login': '10/minute',      # ログイン試行: 1分に10回まで
+        'register': '5/hour',      # 新規登録: 1時間に5回まで
+    },
 }
 
 # CORS settings
@@ -202,9 +218,15 @@ CORS_ALLOW_CREDENTIALS = True
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),  # 1日→30分に短縮（盗難時リスク低減）
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,           # 使用ごとに新しいRefreshTokenを発行
+    'BLACKLIST_AFTER_ROTATION': True,        # 古いRefreshTokenをブラックリスト化
+    'UPDATE_LAST_LOGIN': False,
 }
+
+# パスワードリセットリンクの有効期限（秒）
+PASSWORD_RESET_TIMEOUT = 3600  # 1時間（Djangoデフォルトの3日から短縮）
 
 # Email settings
 # Email settings
